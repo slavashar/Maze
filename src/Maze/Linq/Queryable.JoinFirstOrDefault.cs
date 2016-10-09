@@ -35,10 +35,10 @@ namespace Maze.Linq
             }
 
             return outer.Provider.CreateQuery<TResult>(
-                Expression.Call(
+                System.Linq.Expressions.Expression.Call(
                     null,
                     ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TOuter), typeof(TInner), typeof(TKey), typeof(TResult)),
-                    new Expression[] { outer.Expression, inner.Expression, Expression.Quote(outerKeySelector), Expression.Quote(innerKeySelector), Expression.Quote(resultSelector) }));
+                    new Expression[] { outer.Expression, inner.Expression, System.Linq.Expressions.Expression.Quote(outerKeySelector), System.Linq.Expressions.Expression.Quote(innerKeySelector), System.Linq.Expressions.Expression.Quote(resultSelector) }));
         }
     }
 }

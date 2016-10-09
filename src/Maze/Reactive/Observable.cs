@@ -2,7 +2,7 @@
 
 namespace Maze.Reactive
 {
-    public static class ObservableMaze
+    public static class Observable
     {
         public static IObservable<TResult> Join<TOuter, TInner, TKey, TResult>(this IObservable<TOuter> outer, IObservable<TInner> inner, Func<TOuter, TKey> outerKeySelector, Func<TInner, TKey> innerKeySelector, Func<TOuter, TInner, TResult> resultSelector)
         {

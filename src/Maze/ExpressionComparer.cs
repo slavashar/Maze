@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Maze
@@ -11,6 +12,8 @@ namespace Maze
         private static readonly Lazy<ExpressionComparer> DefaultExpressionComparer = new Lazy<ExpressionComparer>(() => new ExpressionComparer());
 
         private static readonly Lazy<TypeComparer> DefaultTypeComparer = new Lazy<TypeComparer>(() => new TypeComparer());
+
+        private static readonly Lazy<MemberInfoComparer> DefaultMemberInfoComparer = new Lazy<MemberInfoComparer>(() => new MemberInfoComparer(DefaultTypeComparer.Value));
 
         private static readonly Lazy<IDictionary<ExpressionType, IImplComparer>> ConcreteExpressionComparers;
 
@@ -234,6 +237,11 @@ namespace Maze
                     return (IComparer<TResult>)DefaultTypeComparer.Value;
                 }
 
+                if (typeof(TResult) == typeof(MemberInfo))
+                {
+                    return (IComparer<TResult>)DefaultMemberInfoComparer.Value;
+                }
+
                 if (typeof(TResult) == typeof(string))
                 {
                     return (IComparer<TResult>)DefaultStringComparer;
@@ -252,6 +260,11 @@ namespace Maze
                 if (typeof(TResult) == typeof(Type))
                 {
                     return (IEqualityComparer<TResult>)DefaultTypeComparer.Value;
+                }
+
+                if (typeof(TResult) == typeof(MemberInfo))
+                {
+                    return (IEqualityComparer<TResult>)DefaultMemberInfoComparer.Value;
                 }
 
                 if (typeof(TResult) == typeof(string))
@@ -424,6 +437,28 @@ namespace Maze
             protected override int NotNullableCompare(Type x, Type y)
             {
                 return DefaultStringComparer.Compare(x.FullName, y.FullName);
+            }
+        }
+
+        private class MemberInfoComparer : BaseComparer<MemberInfo>
+        {
+            private TypeComparer typeComparer;
+
+            public MemberInfoComparer(TypeComparer typeComparer)
+            {
+                this.typeComparer = typeComparer;
+            }
+
+            protected override int NotNullableCompare(MemberInfo x, MemberInfo y)
+            {
+                var result = this.typeComparer.Compare(x.DeclaringType, x.DeclaringType);
+
+                if (result != 0)
+                {
+                    return result;
+                }
+
+                return DefaultStringComparer.Compare(x.Name, y.Name);
             }
         }
 

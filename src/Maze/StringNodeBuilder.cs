@@ -1,134 +1,123 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using Maze.Nodes;
 
 namespace Maze
 {
     public static class MappingNodeStringifyExtension
     {
-        private static readonly Lazy<StringNodeBuilder> builder = new Lazy<StringNodeBuilder>();
+        private static readonly TextSyntaxNodeVisitor Builder = new TextSyntaxNodeVisitor();
 
         public static string Stringify(this Node node)
         {
-            return builder.Value.CreateElement(node);
+            return Builder.VisitNode(node).Print();
         }
     }
 
-    public class StringNodeBuilder
+    public abstract class NodeVisitor<TResult>
     {
-        private ImmutableDictionary<Token, string> custom;
-
-        public StringNodeBuilder()
-        {
-            this.custom = ImmutableDictionary<Token, string>.Empty;
-        }
-
-        public StringNodeBuilder(ImmutableDictionary<Token, string> custom)
-        {
-            this.custom = custom;
-        }
-
-        public string CreateElement(Node node)
+        public virtual TResult VisitNode(Node node)
         {
             switch (node.Kind)
             {
                 case NodeKind.Empty:
-                    return string.Empty;
+                    return this.VisitEmptyNode();
 
                 case NodeKind.Text:
-                    return CreateText((TextNode)node);
+                    return this.VisitTextNode((TextNode)node);
 
-                case NodeKind.Unary:
-                    return CreateUnary((IUnaryNode)node);
+                case NodeKind.MultiItem:
+                    return this.VisitMultiItemNode((MultiItemNode)node, null);
 
-                case NodeKind.Item:
-                    return CreateSingleItem((IItemNode)node);
-
-                case NodeKind.UnaryItem:
-                    return CreateUnarySingleItem((IUnaryItemNode)node);
-
-                case NodeKind.Binary:
-                    return CreateBinary((IBinaryNode)node);
-
-                case NodeKind.Complex:
-                    return CreateComplex((IComplexNode)node);
+                case NodeKind.Token:
+                case NodeKind.ElementToken:
+                    return this.VisitTokenNode(((ITokenNode)node).Token, node);
 
                 default:
                     throw new NotImplementedException();
             }
         }
 
-        private string CreateText(TextNode node)
+        public virtual TResult VisitSyntax(Syntax syntax, Node node)
         {
-            return node.Value;
-        }
-
-        private string CreateUnary(IUnaryNode node)
-        {
-            return string.Format(this.custom.GetValueOrDefault(node.Token, node.Token.Format), this.CreateElement(node.Parent));
-        }
-
-        private string CreateSingleItem(IItemNode node)
-        {
-            return string.Format(this.custom.GetValueOrDefault(node.Token, node.Token.Format), this.CreateElement(node.Item));
-        }
-
-        private string CreateUnarySingleItem(IUnaryItemNode node)
-        {
-            return string.Format(this.custom.GetValueOrDefault(node.Token, node.Token.Format), this.CreateElement(node.Parent), this.CreateElement(node.Item));
-        }
-
-        private string CreateBinary(IBinaryNode node)
-        {
-            return string.Format(this.custom.GetValueOrDefault(node.Token, node.Token.Format), this.CreateElement(node.Left), this.CreateElement(node.Right));
-        }
-
-        private string CreateComplex(IComplexNode node)
-        {
-            if (node is ComplexNode<ConditionalExpression>)
+            switch (syntax.Kind)
             {
-                return this.CreateConditional((ComplexNode<ConditionalExpression>)node);
+                case SyntaxKind.Text:
+                    return this.VisitTextSyntax((TextSyntax)syntax);
+
+                case SyntaxKind.Node:
+                case SyntaxKind.NodeContainer:
+                    var item = ((ITokenNode)node)[((NodeSyntax)syntax).Connection];
+
+                    if (item == null)
+                    {
+                        throw new InvalidOperationException();
+                        //return this.VisitEmptySyntax();
+                    }
+
+                    if (syntax.Kind == SyntaxKind.NodeContainer && item.Kind == NodeKind.MultiItem)
+                    {
+                        var separetor = ((NodeContainerSyntax)syntax).Separetor;
+
+                        return this.VisitMultiItemNode((MultiItemNode)item, separetor);
+                    }
+
+                    return this.VisitNode(item);
+
+                default:
+                    throw new InvalidOperationException();
+            }
+        }
+
+        protected abstract TResult VisitEmptyNode();
+
+        protected abstract TResult VisitTextNode(TextNode node);
+
+        protected abstract TResult VisitMultiItemNode(MultiItemNode node, TextSyntax separetor);
+
+        protected abstract TResult VisitTokenNode(Token token, Node node);
+
+        protected abstract TResult VisitEmptySyntax();
+
+        protected abstract TResult VisitTextSyntax(TextSyntax syntax);
+    }
+
+    public class TextSyntaxNodeVisitor : NodeVisitor<IEnumerable<TextSyntax>>
+    {
+        protected override IEnumerable<TextSyntax> VisitEmptyNode()
+        {
+            return Enumerable.Empty<TextSyntax>();
+        }
+
+        protected override IEnumerable<TextSyntax> VisitTextNode(TextNode node)
+        {
+            yield return SyntaxFactory.FromText(node.Value);
+        }
+
+        protected override IEnumerable<TextSyntax> VisitMultiItemNode(MultiItemNode node, TextSyntax separetor)
+        {
+            if (separetor == null)
+            {
+                return node.SelectMany(this.VisitNode);
             }
 
-            if (node is ComplexNode<MethodCallExpression>)
-            {
-                return this.CreateCall((ComplexNode<MethodCallExpression>)node);
-            }
-
-            if (node is ComplexNode<NewExpression>)
-            {
-                return this.CreateNew((ComplexNode<NewExpression>)node);
-            }
-
-            return string.Join(", ", node);
+            return node.SelectMany((x, i) => i == 0 ? this.VisitNode(x) : Linq.Enumerable.Return(separetor).Concat(this.VisitNode(x)));
         }
 
-        private string CreateConditional(ComplexNode<ConditionalExpression> node)
+        protected override IEnumerable<TextSyntax> VisitTokenNode(Token token, Node node)
         {
-            return string.Format(
-                "If {0} Then {1} Else {2}",
-                this.CreateElement(node.Get(x => x.Test)),
-                this.CreateElement(node.Get(x => x.IfTrue)),
-                this.CreateElement(node.Get(x => x.IfFalse)));
+            return token.GetSyntax().SelectMany(x => this.VisitSyntax(x, node));
         }
 
-        private string CreateCall(ComplexNode<MethodCallExpression> node)
+        protected override IEnumerable<TextSyntax> VisitEmptySyntax()
         {
-            return string.Format(
-                "{0}.{1}({2})",
-                this.CreateElement(node.Get(x => x.Object)),
-                this.CreateElement(node.Get(x => x.Method)),
-                string.Join(", ", node.GetMany(x => x.Arguments).Select(this.CreateElement)));
+            return Enumerable.Empty<TextSyntax>();
         }
 
-        private string CreateNew(ComplexNode<NewExpression> node)
+        protected override IEnumerable<TextSyntax> VisitTextSyntax(TextSyntax syntax)
         {
-            return string.Format(
-                "New {0}: {1}",
-                this.CreateElement(node.Get(x => x.Type)),
-                string.Join(", ", node.GetMany(x => x.Members).Select(this.CreateElement)));
+            return Linq.Enumerable.Return(syntax);
         }
     }
 }

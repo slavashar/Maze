@@ -102,11 +102,14 @@ namespace Maze.Mappings
 
                 switch (proposedSources.Count)
                 {
+                    case 0:
+                        continue;
+
                     case 1:
                         anonymousSources = anonymousSources.Add(missing, proposedSources[0]);
                         missingSources = missingSources.Remove(missing);
-
                         break;
+
                     default:
                         throw new InvalidOperationException("Ambiguous source mapping provided for " + missing.ElementType.Name);
                 }
@@ -115,7 +118,7 @@ namespace Maze.Mappings
             while (true)
             {
                 var detached = detachedMappings
-                    .Where(m => m.SourceMappings.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
+                    .Where(m => m.SourceMappings.Values.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
                     .ToList();
 
                 if (detached.Count == 0)
@@ -151,7 +154,7 @@ namespace Maze.Mappings
             var anonymousSources = this.anonymousSources;
             var missingSources = this.missingSources;
 
-            var anonymouses = instance.SourceMappings.OfType<IAnonymousMapping>();
+            var anonymouses = instance.SourceMappings.Values.OfType<IAnonymousMapping>();
 
             if (anonymouses.Any())
             {
@@ -182,7 +185,7 @@ namespace Maze.Mappings
                     }
                 }
 
-                if (sourceAvailable && instance.SourceMappings.Except(anonymouses).All(executionQueue.Contains))
+                if (sourceAvailable && instance.SourceMappings.Values.Except(anonymouses).All(executionQueue.Contains))
                 {
                     executionQueue = executionQueue.Enqueue(instance);
                 }
@@ -193,7 +196,7 @@ namespace Maze.Mappings
             }
             else
             {
-                if (instance.SourceMappings.All(executionQueue.Contains))
+                if (instance.SourceMappings.Values.All(executionQueue.Contains))
                 {
                     executionQueue = executionQueue.Enqueue(instance);
                 }
@@ -212,7 +215,7 @@ namespace Maze.Mappings
             while (true)
             {
                 var detached = detachedMappings
-                    .Where(m => m.SourceMappings.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
+                    .Where(m => m.SourceMappings.Values.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
                     .ToList();
 
                 if (detached.Count == 0)
@@ -261,27 +264,10 @@ namespace Maze.Mappings
                 container.missingSources);
         }
 
-        internal void BuildGraph<TNode>(IExecutionGraphBuilder<TNode> builder)
+        // TODO: get rid of this
+        public IMapping GetSourceMapping(IMapping mapping)
         {
-            var nodes = new Dictionary<IMapping, TNode>();
-
-            foreach (var mapping in this.executionQueue)
-            {
-                var expression = mapping.Expression;
-                if (expression == null)
-                {
-                    throw new InvalidOperationException("Cannot create mapping node from " + mapping.GetType().Name);
-                }
-
-                var type = mapping.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single();
-
-                var sources = mapping.SourceMappings.Select(x => nodes[x is IAnonymousMapping ? this.anonymousSources[(IAnonymousMapping)x] : x]);
-
-                var node = TypeExt.InvokeGenericMethod<TNode>(
-                    new Func<IMapping<object>, LambdaExpression, IEnumerable<TNode>, TNode>(builder.CreateExpressionNode), type, mapping, expression, sources);
-
-                nodes.Add(mapping, node);
-            }
+            return mapping is IAnonymousMapping ? this.anonymousSources[(IAnonymousMapping)mapping] : mapping;
         }
     }
 }

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Linq;
 using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace Maze.Nodes
 {
     public static class NodeFactory
     {
-        public static Node Empty { get; } = new EmptyNode();
+        public static Node Empty { get; } = EmptyNode.Create();
 
         public static TextNode Text(string txt)
         {
@@ -18,201 +17,167 @@ namespace Maze.Nodes
                 throw new ArgumentNullException(nameof(txt));
             }
 
-            return new TextNode(txt);
+            return TextNode.Create(txt);
         }
 
-        public static EmptyNode Node()
+        public static TokenNode<ItemToken> ItemNode(ItemToken token, Node item)
         {
-            return EmptyNode.Create();
+            return TokenNode<ItemToken>.Create(token, ItemToken.Item, item);
         }
 
-        public static EmptyNode<TElement> Node<TElement>()
+        public static ElementNode<TElement, ItemToken> ItemNode<TElement>(TElement element, ItemToken token, Node item)
         {
-            return EmptyNode<TElement>.Create(default(TElement));
+            return ElementNode<TElement, ItemToken>.Create(element, token, ItemToken.Item, item);
         }
 
-        public static EmptyNode<TElement> Node<TElement>(TElement element)
+        public static TokenNode<BinaryToken> BinaryNode(BinaryToken token, Node left, Node right)
         {
-            return EmptyNode<TElement>.Create(element);
+            return TokenNode<BinaryToken>.Create(token, BinaryToken.Left, left, BinaryToken.Right, right);
         }
 
-        public static EmptyNode Node(Token token)
+        public static ElementNode<TElement, BinaryToken> BinaryNode<TElement>(TElement element, BinaryToken token, Node left, Node right)
         {
-            return EmptyNode.Create(token);
+            return ElementNode<TElement, BinaryToken>.Create(element, token, BinaryToken.Left, left, BinaryToken.Right, right);
         }
 
-        public static UnaryNode Node(UnaryToken token, Node parent)
+        public static TokenNode<UnaryToken> Then(this Node parent, UnaryToken token)
         {
-            return UnaryNode.Create(token, parent);
+            return TokenNode<UnaryToken>.Create(token, UnaryToken.Parent, parent);
         }
 
-        public static UnaryNode<TElement> Node<TElement>(Expression<Func<TElement, object>> parentSelector, Node parent)
+        public static ElementNode<TElement, UnaryToken> Then<TElement>(this Node parent, TElement element, UnaryToken token)
         {
-            throw new NotImplementedException();
+            return ElementNode<TElement, UnaryToken>.Create(element, token, UnaryToken.Parent, parent);
         }
 
-        public static UnaryNode<TElement> Node<TElement>(TElement element, UnaryToken token, Expression<Func<TElement, object>> parentSelector, Node parent)
+        public static TokenNode<UnaryItemToken> Then(this Node parent, UnaryItemToken token, Node item)
         {
-            return UnaryNode<TElement>.Create(element, token, parentSelector, parent);
+            return TokenNode<UnaryItemToken>.Create(token, UnaryItemToken.Parent, parent, UnaryItemToken.Item, item);
         }
 
-        public static ItemNode ItemNode(ItemToken token, Node item)
+        public static ElementNode<TElement, UnaryItemToken> Then<TElement>(this Node parent, TElement element, UnaryItemToken token, Node item)
         {
-            return Nodes.ItemNode.Create(token, item);
+            return ElementNode<TElement, UnaryItemToken>.Create(element, token, UnaryItemToken.Parent, parent, UnaryItemToken.Item, item);
         }
 
-        public static ItemNode<TElement> ItemNode<TElement>(Expression<Func<TElement, object>> itemSelector, Node item)
+        public static MultiItemNode MultipleItems(params Node[] nodes)
         {
-            throw new NotImplementedException();
+            return MultiItemNode.Create(nodes);
         }
 
-        public static ItemNode<TElement> ItemNode<TElement>(TElement element, ItemToken token, Expression<Func<TElement, object>> itemSelector, Node item)
+        public static MultiItemNode MultipleItems(IEnumerable<Node> nodes)
         {
-            return Nodes.ItemNode<TElement>.Create(element, token, itemSelector, item);
+            return MultiItemNode.Create(nodes);
         }
 
-        public static UnaryItemNode Node(UnaryItemToken token, Node parent, Node item)
+        public static Node Get<TElement>(this IElementNode<TElement> node, Expression<Func<TElement, object>> selector)
         {
-            return UnaryItemNode.Create(token, parent, item);
+            return Get((ITokenNode)node, selector);
         }
 
-        public static UnaryItemNode<TElement> Node<TElement>(TElement element, UnaryItemToken token, Expression<Func<TElement, object>> parentSelector, Node parent, Expression<Func<TElement, object>> itemSelector, Node item)
+        public static Node Get<TElement>(this ITokenNode node, Expression<Func<TElement, object>> selector)
         {
-            return UnaryItemNode<TElement>.Create(element, token, parentSelector, parent, itemSelector, item);
-        }
+            var member = ((MemberExpression)selector.Body).Member;
 
-        public static UnaryItemNode<TElement> Node<TElement>(Expression<Func<TElement, object>> parentSelector, Node parent, Expression<Func<TElement, object>> itemSelector, Node item)
-        {
-            throw new NotImplementedException();
-        }
+            var token = node.Token as IElementToken<TElement>;
 
-        public static BinaryNode BinaryNode(BinaryToken token, Node left, Node right)
-        {
-            return Nodes.BinaryNode.Create(token, left, right);
-        }
+            var connection = token?.Get(member);
 
-        public static BinaryNode<TElement> BinaryNode<TElement>(TElement element, BinaryToken token, Expression<Func<TElement, object>> leftSelector, Node left, Expression<Func<TElement, object>> rightSelector, Node right)
-        {
-            return Nodes.BinaryNode<TElement>.Create(element, token, leftSelector, left, rightSelector, right);
-        }
-
-        public static UnaryNode Then(this Node parent, UnaryToken token)
-        {
-            return Node(token, parent);
-        }
-
-        public static UnaryItemNode Then(this Node parent, UnaryItemToken token, Node item)
-        {
-            return Node(token, parent, item);
-        }
-
-        public static UnaryNode<TElement> Then<TElement>(this Node parent, Expression<Func<TElement, object>> parentSelection)
-        {
-            return Node(parentSelection, parent);
-        }
-
-        public static UnaryItemNode<TElement> Then<TElement>(
-            this Node parent, TElement element, UnaryItemToken token, 
-            Expression<Func<TElement, object>> parentSelection, 
-            Expression<Func<TElement, object>> itemSelection, Node item)
-        {
-            return Node(element, token, parentSelection, parent, itemSelection, item);
-        }
-
-        public static UnaryItemNode<T> Then<T>(this Node parent, Expression<Func<T, object>> parentSelection, Expression<Func<T, object>> itemSelection, Node item)
-        {
-            return Node(parentSelection, parent, itemSelection, item);
-        }
-
-        public static Node Replace(this Node node, Node replacement)
-        {
-            throw new NotImplementedException();
-
-            //    if (node is IParentNodeProvider)
-            //    {
-            //        var parents = ((IParentNodeProvider)node).Parents;
-
-            //        if (parents.Count > 0)
-            //        {
-            //            if (replacement.Kind == NodeKind.Token)
-            //            {
-            //                return ((TokenDiagramNode)replacement).AddParents(parents);
-            //            }
-
-            //            return Node(Token.Replacement).AddParents(parents).AddItem(replacement);
-            //        }
-            //    }
-
-            //    return replacement;
-        }
-
-        public static TokenNodeSelection<UnaryNode, UnaryToken> Find(this Node node, params UnaryToken[] tokens)
-        {
-            if (tokens.Length == 0)
+            if (connection == null)
             {
-                throw new InvalidOperationException();
+                return null;
             }
 
-            if (tokens.Length == 1)
+            var result = node[connection];
+
+            return result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result).Single() : result;
+        }
+
+        public static IEnumerable<Node> GetMany<TElement>(this IElementNode<TElement> node, Expression<Func<TElement, object>> selector)
+        {
+            return GetMany((ITokenNode)node, selector);
+        }
+
+        public static IEnumerable<Node> GetMany<TElement>(this ITokenNode node, Expression<Func<TElement, object>> selector)
+        {
+            var member = ((MemberExpression)selector.Body).Member;
+
+            var token = node.Token as IElementToken<TElement>;
+
+            var connection = token?.Get(member);
+
+            if (connection == null)
             {
-                return TokenNodeSelection<UnaryNode, UnaryToken>.Create(node, tokens[0]);
+                return null;
             }
 
-            return TokenNodeSelection<UnaryNode, UnaryToken>.Create(node, tokens);
+            var result = node[connection];
+
+            return result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result);
         }
 
-        public static TokenNodeSelection<UnaryNode, UnaryToken> Find(this Node node, UnaryToken token, Func<UnaryNode, bool> predicate)
+        public static Node GetParent(this ITokenNode node)
         {
-            return TokenNodeSelection<UnaryNode, UnaryToken>.Create(node, token, predicate);
+            return node.Token.Connections
+                .Where(x => x.Parent)
+                .Select(connection => node[connection])
+                .SelectMany(result => result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result))
+                .Single();
         }
 
-        public static TypedDiagramNodeSelection<T, TypedNode<T>> Find<T>(this Node node)
+        public static IEnumerable<Node> GetParents(this ITokenNode node)
         {
-            return TypedDiagramNodeSelection<T, TypedNode<T>>.Create(node);
+            return node.Token.Connections
+                .Where(x => x.Parent)
+                .Select(connection => node[connection])
+                .SelectMany(result => result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result));
         }
 
-        public static TypedDiagramNodeSelection<T, UnaryItemNode<T>> FindUnaryItem<T>(this Node node)
+        public static Node GetItem(this ITokenNode node)
         {
-            return TypedDiagramNodeSelection<T, UnaryItemNode<T>>.Create(node);
+            return node.Token.Connections
+                .Where(x => !x.Parent)
+                .Select(connection => node[connection])
+                .SelectMany(result => result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result))
+                .Single();
         }
 
-        public static TypedDiagramNodeSelection<T, TypedNode<T>> Find<T>(this Node node, Func<TypedNode<T>, bool> predicate)
+        public static IEnumerable<Node> GetItems(this ITokenNode node)
         {
-            return TypedDiagramNodeSelection<T, TypedNode<T>>.Create(node, predicate);
+            return node.Token.Connections
+                .Where(x => !x.Parent)
+                .Select(connection => node[connection])
+                .SelectMany(result => result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result));
         }
 
-        public static TypedDiagramNodeSelection<T, UnaryNode<T>> FindUnary<T>(this Node node, Func<UnaryNode<T>, bool> predicate)
+        public static ElementNodeBuilder<TElement, TToken> Build<TElement, TToken>(TElement element, TToken token)
+            where TToken : Token, IElementToken<TElement>
         {
-            return TypedDiagramNodeSelection<T, UnaryNode<T>>.Create(node, predicate);
+            return new ElementNodeBuilder<TElement, TToken>(element, token);
         }
 
-        public static TypedDiagramNodeSelection<T, UnaryItemNode<T>> FindUnaryItem<T>(this Node node, Func<UnaryItemNode<T>, bool> predicate)
+        public static TokenNodeSelection<TToken> Find<TToken>(this Node node, TToken token)
+            where TToken : Token
         {
-            return TypedDiagramNodeSelection<T, UnaryItemNode<T>>.Create(node, predicate);
+            return TokenNodeSelection<TToken>.Create(node, token);
         }
 
-        public static TypedDiagramNodeSelection<T, BinaryNode<T>> FindBinary<T>(this Node node, Func<BinaryNode<T>, bool> predicate)
+        public static ElementNodeSelection<T> Find<T>(this Node node, Func<IElementNode<T>, bool> predicate)
         {
-            return TypedDiagramNodeSelection<T, BinaryNode<T>>.Create(node, predicate);
+            return ElementNodeSelection<T>.Create(node, predicate);
         }
 
-        public static TypedDiagramNodeSelection<T, ComplexNode<T>> FindComplex<T>(this Node node, Func<ComplexNode<T>, bool> predicate)
+        public abstract class BaseNodeSelection<TNode>
         {
-            return TypedDiagramNodeSelection<T, ComplexNode<T>>.Create(node, predicate);
-        }
-
-        public abstract class DiagramNodeSelection<TNode>
-            where TNode : Node
-        {
-            protected readonly Node origin;
-
-            public DiagramNodeSelection(Node node, ImmutableHashSet<TNode> nodes)
+            public BaseNodeSelection(Node node, ImmutableHashSet<Node> nodes)
             {
-                this.origin = node;
+                this.Root = node;
                 this.Nodes = nodes;
             }
 
-            public ImmutableHashSet<TNode> Nodes { get; }
+            public Node Root { get; }
+
+            public ImmutableHashSet<Node> Nodes { get; }
 
             protected static void Flat(ISet<Node> set, Node node)
             {
@@ -228,17 +193,22 @@ namespace Maze.Nodes
                 }
             }
 
-            protected static Node Visit(HashSet<Node> set, ISet<TNode> afected, Node node, Func<TNode, Node> visit)
+            protected static Node Visit(HashSet<Node> set, ISet<Node> afected, Node node, Func<TNode, Node> visit)
             {
                 if (set.Add(node))
                 {
-                    if (afected.Contains(node))
+                    while (afected.Contains(node))
                     {
-                        node = visit((TNode)node);
+                        node = visit((TNode)(dynamic)node);
 
                         if (node == null)
                         {
                             throw new InvalidOperationException();
+                        }
+
+                        if (!set.Add(node))
+                        {
+                            break;
                         }
                     }
 
@@ -260,65 +230,90 @@ namespace Maze.Nodes
             }
         }
 
-        public class TokenNodeSelection<TNode, TToken> : DiagramNodeSelection<TNode>
-            where TNode : Node, ITokenNode<TToken>
+        public class TokenNodeSelection<TToken> : BaseNodeSelection<ITokenNode<TToken>>
             where TToken : Token
         {
-            public TokenNodeSelection(Node node, ImmutableHashSet<TNode> nodes) : base(node, nodes)
+            public TokenNodeSelection(Node node, ImmutableHashSet<Node> nodes)
+                : base(node, nodes)
             {
             }
 
-            public static TokenNodeSelection<TNode, TToken> Create(Node node, TToken token)
+            public Node Change(Func<ITokenNode<TToken>, Node> visit)
+            {
+                return Visit(new HashSet<Node>(), this.Nodes, this.Root, visit);
+            }
+
+            internal static TokenNodeSelection<TToken> Create(Node node, TToken token)
             {
                 var set = new HashSet<Node>();
                 Flat(set, node);
-                return new TokenNodeSelection<TNode, TToken>(node, ImmutableHashSet.CreateRange(set.OfType<TNode>().Where(x => x.Token == token)));
-            }
-
-            public static TokenNodeSelection<TNode, TToken> Create(Node node, IEnumerable<TToken> tokens)
-            {
-                var set = new HashSet<Node>();
-                Flat(set, node);
-                return new TokenNodeSelection<TNode, TToken>(node, ImmutableHashSet.CreateRange(set.OfType<TNode>().Where(x => tokens.Contains(x.Token))));
-            }
-
-            public static TokenNodeSelection<TNode, TToken> Create(Node node, TToken token, Func<TNode, bool> predicate)
-            {
-                var set = new HashSet<Node>();
-                Flat(set, node);
-                return new TokenNodeSelection<TNode, TToken>(node, ImmutableHashSet.CreateRange(set.OfType<TNode>().Where(x => x.Token == token).Where(predicate)));
-            }
-
-            public Node Change(Func<TNode, Node> visit)
-            {
-                return Visit(new HashSet<Node>(), this.Nodes, this.origin, visit);
+                return new TokenNodeSelection<TToken>(node, ImmutableHashSet.CreateRange(set.OfType<ITokenNode<TToken>>().Where(x => x.Token == token).Cast<Node>()));
             }
         }
 
-        public class TypedDiagramNodeSelection<TElement, TDiagramNode> : DiagramNodeSelection<TDiagramNode>
-            where TDiagramNode : TypedNode<TElement>
+        public class ElementNodeSelection<TElement> : BaseNodeSelection<IElementNode<TElement>>
         {
-            public TypedDiagramNodeSelection(Node node, ImmutableHashSet<TDiagramNode> nodes) : base(node, nodes)
+            public ElementNodeSelection(Node node, ImmutableHashSet<Node> nodes)
+                : base(node, nodes)
             {
             }
 
-            public static TypedDiagramNodeSelection<TElement, TDiagramNode> Create(Node node)
+            public Node Change(Func<IElementNode<TElement>, Node> visit)
+            {
+                return Visit(new HashSet<Node>(), this.Nodes, this.Root, visit);
+            }
+
+            internal static ElementNodeSelection<TElement> Create(Node node, Func<IElementNode<TElement>, bool> predicate)
             {
                 var set = new HashSet<Node>();
                 Flat(set, node);
-                return new TypedDiagramNodeSelection<TElement, TDiagramNode>(node, ImmutableHashSet.CreateRange(set.OfType<TDiagramNode>()));
+                return new ElementNodeSelection<TElement>(node, ImmutableHashSet.CreateRange(set.OfType<IElementNode<TElement>>().Where(predicate).Cast<Node>()));
+            }
+        }
+
+        public class ElementNodeBuilder<TElement, TToken>
+            where TToken : Token, IElementToken<TElement>
+        {
+            private readonly TElement element;
+            private readonly TToken token;
+            private readonly ImmutableDictionary<TokenConnection, Node> connections;
+
+            public ElementNodeBuilder(TElement element, TToken token)
+            {
+                this.element = element;
+                this.token = token;
+                this.connections = ImmutableDictionary<TokenConnection, Node>.Empty;
             }
 
-            internal static TypedDiagramNodeSelection<TElement, TDiagramNode> Create(Node node, Func<TDiagramNode, bool> predicate)
+            private ElementNodeBuilder(TElement element, TToken token, ImmutableDictionary<TokenConnection, Node> connections)
             {
-                var set = new HashSet<Node>();
-                Flat(set, node);
-                return new TypedDiagramNodeSelection<TElement, TDiagramNode>(node, ImmutableHashSet.CreateRange(set.OfType<TDiagramNode>().Where(predicate)));
+                this.element = element;
+                this.token = token;
+                this.connections = connections;
             }
 
-            public Node Change(Func<TDiagramNode, Node> visit)
+            public static implicit operator ElementNode<TElement, TToken>(ElementNodeBuilder<TElement, TToken> builder)
             {
-                return Visit(new HashSet<Node>(), this.Nodes, this.origin, visit);
+                return builder.ToNode();
+            }
+
+            public ElementNodeBuilder<TElement, TToken> Add(TokenConnection connection, Node node)
+            {
+                return new ElementNodeBuilder<TElement, TToken>(this.element, this.token, this.connections.Add(connection, node));
+            }
+
+            public ElementNodeBuilder<TElement, TToken> Add(Expression<Func<TElement, object>> selector, Node node)
+            {
+                var member = ((MemberExpression)selector.Body).Member;
+
+                var connection = this.token.Get(member);
+
+                return new ElementNodeBuilder<TElement, TToken>(this.element, this.token, this.connections.Add(connection, node));
+            }
+
+            public ElementNode<TElement, TToken> ToNode()
+            {
+                return ElementNode<TElement, TToken>.Create(this.element, this.token, this.connections);
             }
         }
     }

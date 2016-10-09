@@ -11,15 +11,20 @@ namespace Maze
 {
     public class MappingContext : IQueryProvider
     {
-        private static readonly ExpressionVisitor Visitor = new MazeExtVisitor();
+        private static readonly ExpressionVisitor Visitor = new OperatorVisitor();
 
         private readonly Dictionary<Expression, ExpressionNode> nodes = new Dictionary<Expression, ExpressionNode>(ExpressionComparer.Default);
 
+        public IQueryable<TElement> CreateSource<TElement>(ParameterExpression parameter)
+        {
+            return this.CreateNode<TElement>(parameter, new[] { parameter });
+        }
+
         public IQueryable<TElement> CreateSource<TElement>(string name = null)
         {
-            var paremeter = Expression.Parameter(typeof(IQueryable<TElement>), name);
+            var parameter = Expression.Parameter(typeof(IQueryable<TElement>), name);
 
-            return this.CreateNode<TElement>(paremeter, new[] { paremeter });
+            return this.CreateNode<TElement>(parameter, new[] { parameter });
         }
 
         public IQueryable<TElement> CreateSource<TElement>(LambdaExpression expression)

@@ -1,24 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq.Expressions;
 
 namespace Maze.Mappings
 {
     public sealed class AnonymousMapping<TElement> : IMapping<TElement>, IAnonymousMapping
     {
-        public System.Linq.Expressions.LambdaExpression Expression
+        public Type ElementType
+        {
+            get { return typeof(TElement); }
+        }
+
+        public string Name
+        {
+            get { return this.ElementType.Name; }
+        }
+
+        public LambdaExpression Expression
         {
             get { return null; }
         }
 
-        public ImmutableList<IMapping> SourceMappings
+        public ImmutableDictionary<ParameterExpression, IMapping> SourceMappings
         {
-            get { return ImmutableList<IMapping>.Empty; }
-        }
-
-        public Type ElementType
-        {
-            get { return typeof(TElement); }
+            get { return ImmutableDictionary<ParameterExpression, IMapping>.Empty; }
         }
 
         public override bool Equals(object obj)

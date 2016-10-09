@@ -10,32 +10,112 @@ namespace Maze
 {
     public static class Engine
     {
-        public static MappingReference<TElement> Create<TElement>(IEnumerable<TElement> items)
+        public static MappingReference<TElement> Source<TElement>(IEnumerable<TElement> items)
         {
-            return ContainerReference.Empty.Add(new EnumerableMapping<TElement>(items));
+            return Source<TElement>(null, items);
+        }
+
+        public static MappingReference<TElement> Source<TElement>(string name, IEnumerable<TElement> items)
+        {
+            return ContainerReference.Empty.Add(new EnumerableMapping<TElement>(name, items));
         }
 
         public static MappingReference<TElement> Map<TSource, TElement>(Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
         {
-            return ContainerReference.Empty.Add(new ExpressionMapping<TElement>(map, ImmutableList.Create<IMapping>(new AnonymousMapping<TSource>())));
+            return Map((string)null, map);
+        }
+
+        public static MappingReference<TElement> Map<TSource, TElement>(string name, Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
+        {
+            var sourceMappings = new Dictionary<ParameterExpression, IMapping>
+            {
+                [map.Parameters[0]] = new AnonymousMapping<TSource>()
+            };
+
+            return ContainerReference.Empty.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TElement>(Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TElement>>> map)
+        {
+            return Map(null, map);
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TElement>(string name, Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TElement>>> map)
+        {
+            var sourceMappings = new Dictionary<ParameterExpression, IMapping>
+            {
+                [map.Parameters[0]] = new AnonymousMapping<TSource1>(),
+                [map.Parameters[1]] = new AnonymousMapping<TSource2>(),
+            };
+
+            return ContainerReference.Empty.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TSource3, TElement>(Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TSource3>, IQueryable<TElement>>> map)
+        {
+            return Map(null, map);
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TSource3, TElement>(string name, Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TSource3>, IQueryable<TElement>>> map)
+        {
+            var sourceMappings = new Dictionary<ParameterExpression, IMapping>
+            {
+                [map.Parameters[0]] = new AnonymousMapping<TSource1>(),
+                [map.Parameters[1]] = new AnonymousMapping<TSource2>(),
+                [map.Parameters[2]] = new AnonymousMapping<TSource3>(),
+            };
+
+            return ContainerReference.Empty.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TSource3, TSource4, TElement>(Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TSource3>, IQueryable<TSource4>, IQueryable<TElement>>> map)
+        {
+            return Map(null, map);
+        }
+
+        public static MappingReference<TElement> Map<TSource1, TSource2, TSource3, TSource4, TElement>(string name, Expression<Func<IQueryable<TSource1>, IQueryable<TSource2>, IQueryable<TSource3>, IQueryable<TSource4>, IQueryable<TElement>>> map)
+        {
+            var sourceMappings = new Dictionary<ParameterExpression, IMapping>
+            {
+                [map.Parameters[0]] = new AnonymousMapping<TSource1>(),
+                [map.Parameters[1]] = new AnonymousMapping<TSource2>(),
+                [map.Parameters[2]] = new AnonymousMapping<TSource3>(),
+                [map.Parameters[3]] = new AnonymousMapping<TSource4>(),
+            };
+
+            return ContainerReference.Empty.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
+        }
+
+        public static MappingReference<TElement> Map<TSource, TElement>(
+            this MappingReference<TSource> mapping, Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
+        {
+            return Map(mapping, null, map);
+        }
+
+        public static MappingReference<TElement> Map<TSource, TElement>(
+            this MappingReference<TSource> mapping, string name, Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
+        {
+            var sourceMappings = ImmutableDictionary<ParameterExpression, IMapping>.Empty.Add(map.Parameters.Single(), mapping.Instance);
+
+            return mapping.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
         }
 
         public static ComponentMappingReference<TComponent> CreateComponent<TComponent>()
         {
-            var constractors = typeof(TComponent).GetConstructors();
+            var constructors = typeof(TComponent).GetConstructors();
 
-            if (constractors.Length == 0)
+            if (constructors.Length == 0)
             {
-                throw new InvalidOperationException("No public contractor found");
+                throw new InvalidOperationException("No public constructor found");
             }
-            else if (constractors.Length > 1)
+            else if (constructors.Length > 1)
             {
                 throw new InvalidOperationException("Only one contractor expected");
             }
 
             var context = new MappingContext();
 
-            var args = constractors[0].GetParameters()
+            var args = constructors[0].GetParameters()
                 .Select(x => TypeExt.CallGenericMethod(context.CreateSource<object>, x.Name, x.ParameterType.GetGenericArguments().Single()))
                 .ToArray();
 
@@ -43,21 +123,21 @@ namespace Maze
                 x => x.Expression,
                 x => (IMapping)Activator.CreateInstance(typeof(AnonymousMapping<>).MakeGenericType(x.ElementType)));
 
-            var instance = CreateMappingFromMappingContext(context, (TComponent)constractors[0].Invoke(args), sourceMappings);
+            var instance = CreateMappingFromMappingContext(context, (TComponent)constructors[0].Invoke(args), sourceMappings);
 
             return ContainerReference.Empty.Add(instance);
         }
 
         public static ComponentMappingReference<TComponent> CreateComponent<TComponent>(Expression<Func<TComponent>> map)
         {
-            return ContainerReference.Empty.Add(CreateMappingFromExpressionComponent<TComponent>(map, ImmutableDictionary<Expression, IMapping>.Empty));
+            return ContainerReference.Empty.Add(CreateComponentMappingFromExpression<TComponent>(map, ImmutableDictionary<Expression, IMapping>.Empty));
         }
 
         public static ComponentMappingReference<TComponent> MapComponent<TSource, TComponent>(Expression<Func<IQueryable<TSource>, TComponent>> map)
         {
             var sourceMappings = ImmutableDictionary<Expression, IMapping>.Empty.Add(map.Parameters.Single(), new AnonymousMapping<TSource>());
 
-            return ContainerReference.Empty.Add(CreateMappingFromExpressionComponent<TComponent>(map, sourceMappings));
+            return ContainerReference.Empty.Add(CreateComponentMappingFromExpression<TComponent>(map, sourceMappings));
         }
 
         public static ContainerReference Combine(params ContainerReference[] mappings)
@@ -80,22 +160,44 @@ namespace Maze
             return result;
         }
 
-        public static IExecutionGraph Build(this ContainerReference mapping)
+        public static Type GetElementType(this IMapping mapping)
         {
-            var compiler = new SimpleCompiler();
+            return mapping.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single();
+        }
+
+        public static MappingExecution<TElement> Build<TElement>(this MappingReference<TElement> mapping)
+        {
+            var execution = Build(mapping.Container);
+
+            return new MappingExecution<TElement>(execution, mapping.Instance);
+        }
+
+        public static ExecutionGraph Build(this ContainerReference mapping)
+        {
+            return Build(mapping.Container);
+        }
+
+        public static ExecutionGraph Build(this MappingContainer mapping)
+        {
+            var compiler = new ReactiveCompilerService();
 
             return compiler.Build(mapping);
         }
 
+        public static IObservable<TElement> GetStream<TElement>(this ExecutionGraph execution, MappingReference<TElement> mapping)
+        {
+            return execution.GetStream(mapping.Instance);
+        }
+
         public static IObservable<TElement> Execute<TElement>(this MappingReference<TElement> mapping)
         {
-            var compiler = new SimpleCompiler();
+            var compiler = new ReactiveCompilerService();
 
-            var exec = compiler.Build(mapping);
+            var exec = compiler.Build(mapping.Container);
 
             var subject = new System.Reactive.Subjects.ReplaySubject<TElement>();
 
-            exec.GetStream(mapping).Subscribe(subject);
+            exec.GetStream(mapping.Instance).Subscribe(subject);
             exec.Release();
 
             return subject;
@@ -103,23 +205,16 @@ namespace Maze
 
         public static IObservable<TElement> Execute<TElement, TSource>(this MappingReference<TElement> mapping, params TSource[] source)
         {
-            var compiler = new SimpleCompiler();
+            var compiler = new ReactiveCompilerService();
 
-            var exec = compiler.Build(Combine(Create(source), mapping));
+            var exec = compiler.Build(Combine(Source(source), mapping).Container);
 
             var subject = new System.Reactive.Subjects.ReplaySubject<TElement>();
 
-            exec.GetStream(mapping).Subscribe(subject);
+            exec.GetStream(mapping.Instance).Subscribe(subject);
             exec.Release();
 
             return subject;
-        }
-
-        public static IExecutionGraph Compile(this ContainerReference mapping)
-        {
-            var compiler = new SimpleCompiler();
-
-            return compiler.Build(mapping);
         }
 
         public static MappingReference<TElement> Get<TElement>(this ContainerReference mapping)
@@ -159,18 +254,12 @@ namespace Maze
             return mapping.Wrap(instance);
         }
 
-        public static MappingReference<TElement> Map<TSource, TElement>(
-            this MappingReference<TSource> mapping, Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
-        {
-            return mapping.Add(new ExpressionMapping<TElement>(map, ImmutableList.Create<IMapping>(mapping.Instance)));
-        }
-
         public static ComponentMappingReference<TComponent> MapComponent<TSourceElement, TComponent>(
             this MappingReference<TSourceElement> mapping, Expression<Func<IQueryable<TSourceElement>, TComponent>> map)
         {
             var source = ImmutableDictionary<Expression, IMapping>.Empty.Add(map.Parameters.Single(), mapping.Instance);
 
-            var instance = CreateMappingFromExpressionComponent<TComponent>(map, source);
+            var instance = CreateComponentMappingFromExpression<TComponent>(map, source);
 
             return mapping.Add(instance);
         }
@@ -182,7 +271,7 @@ namespace Maze
 
             var source = mapping.Instance.Mappings.ToImmutableDictionary(x => x.Key.Split('.').Aggregate((Expression)parameter, (ex, name) => Expression.Property(ex, name)), x => x.Value);
 
-            var instance = CreateMappingFromExpressionComponent<TComponent>(map, source);
+            var instance = CreateComponentMappingFromExpression<TComponent>(map, source);
 
             return mapping.Add(instance);
         }
@@ -193,6 +282,26 @@ namespace Maze
             return ContainerReference.Combine(firstMapping, secondMapping);
         }
 
+        private static IMapping<TElement> CreateMappingFromExpression<TElement>(string name, LambdaExpression expression, ImmutableDictionary<ParameterExpression, IMapping> sources)
+        {
+            var context = new MappingContext();
+
+            var proxyArgs = expression.Parameters
+                .Select(x => TypeExt.InvokeGenericMethod<object>(
+                    new Func<ParameterExpression, IQueryable<object>>(context.CreateSource<object>),
+                    x.Type.GetGenericArguments().Single(),
+                    x))
+                .ToArray();
+
+            var result = (IQueryable)expression.Compile().DynamicInvoke(proxyArgs);
+
+            var lambda = context.GetExpression(result);
+
+            var visitor = new Linq.OperatorVisitor();
+
+            return new ExpressionMapping<TElement>(name, (LambdaExpression)visitor.Visit(lambda), sources);
+        }
+
         /// <summary>
         /// Creates Component Mapping from <paramref name="expression"/>
         /// </summary>
@@ -200,7 +309,8 @@ namespace Maze
         /// <param name="expression">Expression of the mapping</param>
         /// <param name="sources">Dictionary of the source mappings</param>
         /// <returns>the mapping</returns>
-        private static IComponentMapping<TComponent> CreateMappingFromExpressionComponent<TComponent>(LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sources)
+        private static IComponentMapping<TComponent> CreateComponentMappingFromExpression<TComponent>(
+            LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sources)
         {
             NewExpression body;
             if (expression.Body.NodeType != ExpressionType.New || (body = expression.Body as NewExpression) == null)
@@ -214,7 +324,7 @@ namespace Maze
                 var props = body.Members.Select(x => new { x.Name, Type = ((PropertyInfo)x).PropertyType.GetGenericArguments().Single() }).ToList();
 
                 var mappings = body.Arguments
-                    .Select((arg, i) => CreateMapping(props[i].Type, Expression.Lambda(arg, expression.Parameters), sources))
+                    .Select((arg, i) => CreateMapping(null, props[i].Type, Expression.Lambda(arg, expression.Parameters), sources))
                     .Select((mapping, i) => new KeyValuePair<string, IMapping>(props[i].Name, mapping))
                     .ToImmutableDictionary();
 
@@ -224,8 +334,10 @@ namespace Maze
             var context = new MappingContext();
 
             var proxyArgs = body.Arguments
-                .Select(x => TypeExt.InvokeGenericMethod<object>(new Func<LambdaExpression, IQueryable<object>>(
-                    context.CreateSource<object>), x.Type.GetGenericArguments().Single(), Expression.Lambda(x, expression.Parameters)))
+                .Select(x => TypeExt.InvokeGenericMethod<object>(
+                    new Func<LambdaExpression, IQueryable<object>>(context.CreateSource<object>),
+                    x.Type.GetGenericArguments().Single(),
+                    Expression.Lambda(x, expression.Parameters)))
                 .ToArray();
 
             return CreateMappingFromMappingContext(context, (TComponent)body.Constructor.Invoke(proxyArgs), sources);
@@ -264,7 +376,7 @@ namespace Maze
             {
                 var lambda = context.GetExpression(item.Query);
 
-                var mapping = CreateMapping(item.ElementType, lambda, sources);
+                var mapping = CreateMapping(null, item.ElementType, lambda, sources);
 
                 mappings.Add(item.Name, mapping);
             }
@@ -278,7 +390,7 @@ namespace Maze
                     var instanceSource = tuple.Value.ToDictionary(
                         x => (Expression)lambda.Parameters.Single(p => p.Name == "this_" + x.Name), x => mappings[x.Name]);
 
-                    var mapping = CreateMapping(tuple.Key.ElementType, lambda, sources.AddRange(instanceSource));
+                    var mapping = CreateMapping(null, tuple.Key.ElementType, lambda, sources.AddRange(instanceSource));
 
                     mappings.Add(tuple.Key.Name, mapping);
                 }
@@ -287,16 +399,17 @@ namespace Maze
             return new ComponentMapping<TComponent>(mappings.ToImmutable());
         }
 
-        private static IMapping CreateMapping(Type elementType, LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sourceMapping)
+        private static IMapping CreateMapping(string name, Type elementType, LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sourceMapping)
         {
             return TypeExt.InvokeGenericMethod<IMapping>(
-                new Func<LambdaExpression, ImmutableDictionary<Expression, IMapping>, IMapping>(CreateMappingExpression<object>),
+                new Func<string, LambdaExpression, ImmutableDictionary<Expression, IMapping>, IMapping>(CreateMappingExpression<object>),
                 elementType,
+                name,
                 expression,
                 sourceMapping);
         }
 
-        private static IMapping<TElement> CreateMappingExpression<TElement>(LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sourceMapping)
+        private static IMapping<TElement> CreateMappingExpression<TElement>(string name, LambdaExpression expression, ImmutableDictionary<Expression, IMapping> sourceMapping)
         {
             if (expression.Body.NodeType == ExpressionType.Call && ((MethodCallExpression)expression.Body).Method.Name == "AsQueryable")
             {
@@ -304,16 +417,16 @@ namespace Maze
 
                 var factory = enumerableExpression.Compile();
 
-                return new EnumerableMapping<TElement>(factory.Invoke());
+                return new EnumerableMapping<TElement>(name, factory.Invoke());
             }
 
             var component = expression.Parameters.SingleOrDefault(x => !typeof(IQueryable).IsAssignableFrom(x.Type));
 
             if (component == null)
             {
-                var sources = expression.Parameters.Select(x => sourceMapping[x]).ToImmutableList();
+                var sources = expression.Parameters.ToImmutableDictionary(x => x, x => sourceMapping[x]);
 
-                return new ExpressionMapping<TElement>(expression, sources);
+                return new ExpressionMapping<TElement>(name, expression, sources);
             }
             else
             {
@@ -323,9 +436,10 @@ namespace Maze
                 var newexpression = Expression.Lambda(
                     visitor.Visit(expression.Body), visitor.Parameters.SelectMany(x => x == component ? visitor.Parameters : new[] { x }));
 
-                var sources = expression.Parameters.SelectMany(x => x == component ? visitor.Sources : new[] { sourceMapping[x] }).ToImmutableList();
+                var sources = newexpression.Parameters
+                    .ToImmutableDictionary(x => x, x => visitor.Sources.ContainsKey(x) ? visitor.Sources[x] : sourceMapping[x]);
 
-                return new ExpressionMapping<TElement>(newexpression, sources);
+                return new ExpressionMapping<TElement>(name, newexpression, sources);
             }
         }
 
@@ -371,9 +485,9 @@ namespace Maze
                 get { return this.parameters.Values; }
             }
 
-            public IEnumerable<IMapping> Sources
+            public IDictionary<ParameterExpression, IMapping> Sources
             {
-                get { return this.parameters.Values.Select(x => this.sources[x]); }
+                get { return this.sources; }
             }
 
             protected override Expression VisitMember(MemberExpression node)

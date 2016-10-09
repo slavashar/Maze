@@ -6,13 +6,11 @@ namespace Maze.Mappings
 {
     public class ExpressionMapping<TElement> : IMapping<TElement>
     {
-        private readonly LambdaExpression expression;
-        private readonly ImmutableList<IMapping> sourceMappings;
-
-        public ExpressionMapping(LambdaExpression expression, ImmutableList<IMapping> sourceMappings)
+        public ExpressionMapping(string name, LambdaExpression expression, ImmutableDictionary<ParameterExpression, IMapping> sourceMappings)
         {
-            this.expression = expression;
-            this.sourceMappings = sourceMappings;
+            this.Name = name ?? ("Transformation: " + typeof(TElement).Name);
+            this.Expression = expression;
+            this.SourceMappings = sourceMappings;
         }
 
         public Type ElementType
@@ -20,19 +18,15 @@ namespace Maze.Mappings
             get { return typeof(TElement); }
         }
 
-        public LambdaExpression Expression
-        {
-            get { return this.expression; }
-        }
+        public string Name { get; }
 
-        public ImmutableList<IMapping> SourceMappings
-        {
-            get { return this.sourceMappings; }
-        }
+        public LambdaExpression Expression { get; }
+
+        public ImmutableDictionary<ParameterExpression, IMapping> SourceMappings { get; }
 
         public override string ToString()
         {
-            return "Transformation: " + typeof(TElement).Name;
+            return this.Name;
         }
     }
 }

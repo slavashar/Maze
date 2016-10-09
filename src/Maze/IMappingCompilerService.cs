@@ -4,6 +4,6 @@ namespace Maze
 {
     public interface IMappingCompilerService
     {
-        IExecutionGraph Build(ContainerReference mapping);
+        ExecutionGraph Build(MappingContainer mapping);
     }
 }

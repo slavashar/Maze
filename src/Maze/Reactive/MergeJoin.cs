@@ -44,14 +44,16 @@ namespace Maze.Reactive
             private readonly ConcurrentDictionary<TKey, ResultObserver> map;
             private readonly CompositeDisposable disposable = new CompositeDisposable(2);
 
-            private volatile bool outerDone = false, innerDone = false, disposed = false;
+            private volatile bool outerDone = false;
+            private volatile bool innerDone = false;
+            private volatile bool disposed = false;
 
             private Executor(MergeJoin<TOuter, TInner, TKey, TResult> parent, IObserver<TResult> observer)
             {
                 this.parent = parent;
                 this.observer = observer;
 
-                this.nullKeySubject = new Lazy<ResultObserver>(this.CreateResultObserver);
+                this.nullKeySubject = new Lazy<ResultObserver>(() => new ResultObserver(this));
                 this.map = new ConcurrentDictionary<TKey, ResultObserver>();
             }
 
@@ -83,12 +85,7 @@ namespace Maze.Reactive
                     return this.nullKeySubject.Value;
                 }
 
-                return this.map.GetOrAdd(key, k => this.CreateResultObserver());
-            }
-
-            private ResultObserver CreateResultObserver()
-            {
-                return new ResultObserver(this);
+                return this.map.GetOrAdd(key, k => new ResultObserver(this));
             }
 
             private void OnNext(TResult value)
@@ -205,56 +202,64 @@ namespace Maze.Reactive
 
             private class ResultObserver
             {
-                private readonly Executor parent;
+                private readonly Executor executor;
                 private readonly IList<TOuter> outerItems = new List<TOuter>();
                 private readonly IList<TInner> innerItems = new List<TInner>();
 
-                public ResultObserver(Executor parent)
+                public ResultObserver(Executor executor)
                 {
-                    this.parent = parent;
+                    this.executor = executor;
                 }
 
                 public void AddOuterItem(TOuter value)
                 {
-                    this.outerItems.Add(value);
-
-                    foreach (var innerValue in this.innerItems)
+                    // TODO: review
+                    lock (this)
                     {
-                        var result = default(TResult);
+                        this.outerItems.Add(value);
 
-                        try
+                        foreach (var innerValue in this.innerItems)
                         {
-                            result = this.parent.parent.resultSelector(value, innerValue);
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parent.OnError(ex);
-                            return;
-                        }
+                            var result = default(TResult);
 
-                        this.parent.OnNext(result);
+                            try
+                            {
+                                result = this.executor.parent.resultSelector(value, innerValue);
+                            }
+                            catch (Exception ex)
+                            {
+                                this.executor.OnError(ex);
+                                return;
+                            }
+
+                            this.executor.OnNext(result);
+                        }
                     }
                 }
 
                 public void AddInnerItem(TInner value)
                 {
-                    this.innerItems.Add(value);
-
-                    foreach (var outerValue in this.outerItems)
+                    // TODO: review
+                    lock (this)
                     {
-                        var result = default(TResult);
+                        this.innerItems.Add(value);
 
-                        try
+                        foreach (var outerValue in this.outerItems)
                         {
-                            result = this.parent.parent.resultSelector(outerValue, value);
-                        }
-                        catch (Exception ex)
-                        {
-                            this.parent.OnError(ex);
-                            return;
-                        }
+                            var result = default(TResult);
 
-                        this.parent.OnNext(result);
+                            try
+                            {
+                                result = this.executor.parent.resultSelector(outerValue, value);
+                            }
+                            catch (Exception ex)
+                            {
+                                this.executor.OnError(ex);
+                                return;
+                            }
+
+                            this.executor.OnNext(result);
+                        }
                     }
                 }
             }

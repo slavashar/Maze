@@ -1,20 +1,22 @@
-﻿using System.Collections.Immutable;
-using System.Reflection;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Maze.Nodes
 {
     public sealed class TextNode : Node
     {
-        internal TextNode(string txt)
+        private TextNode(string txt)
         {
             this.Value = txt;
         }
 
-        public override NodeKind Kind
-        {
-            get { return NodeKind.Text; }
-        }
+        public override NodeKind Kind => NodeKind.Text;
 
         public string Value { get; }
+
+        internal static TextNode Create(string txt)
+        {
+            return new TextNode(txt);
+        }
     }
 }

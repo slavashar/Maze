@@ -60,11 +60,6 @@ namespace Maze.Mappings
             return new ContainerReference(MappingContainer.Merge(this.container, mappingContainer.container));
         }
 
-        internal void BuildGraph<TNode>(IExecutionGraphBuilder<TNode> builder)
-        {
-            this.container.BuildGraph(builder);
-        }
-
         private sealed class EmptyMappingContainer : ContainerReference
         {
             public EmptyMappingContainer()

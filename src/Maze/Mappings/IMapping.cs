@@ -5,9 +5,11 @@ namespace Maze.Mappings
 {
     public interface IMapping
     {
+        string Name { get; }
+
         LambdaExpression Expression { get; }
 
-        ImmutableList<IMapping> SourceMappings { get; }
+        ImmutableDictionary<ParameterExpression, IMapping> SourceMappings { get; }
     }
 
     public interface IMapping<TElement> : IMapping

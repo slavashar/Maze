@@ -7,12 +7,12 @@ namespace Maze.Mappings
 {
     public class EnumerableMapping<TElement> : IMapping<TElement>
     {
-        private readonly IEnumerable<TElement> enumerable;
         private LambdaExpression expression;
 
-        public EnumerableMapping(IEnumerable<TElement> enumerable)
+        public EnumerableMapping(string name, IEnumerable<TElement> enumerable)
         {
-            this.enumerable = enumerable;
+            this.Name = name ?? ("Source: " + typeof(TElement).Name);
+            this.Enumerable = enumerable;
             this.expression = System.Linq.Expressions.Expression.Lambda(System.Linq.Expressions.Expression.Constant(enumerable));
         }
 
@@ -21,24 +21,23 @@ namespace Maze.Mappings
             get { return typeof(TElement); }
         }
 
-        public IEnumerable<TElement> Enumerable
-        {
-            get { return this.enumerable; }
-        }
+        public string Name { get; }
+
+        public IEnumerable<TElement> Enumerable { get; }
 
         public LambdaExpression Expression
         {
             get { return this.expression; }
         }
 
-        public ImmutableList<IMapping> SourceMappings
+        public ImmutableDictionary<ParameterExpression, IMapping> SourceMappings
         {
-            get { return ImmutableList<IMapping>.Empty; }
+            get { return ImmutableDictionary<ParameterExpression, IMapping>.Empty; }
         }
 
         public override string ToString()
         {
-            return "Source: " + typeof(TElement).Name;
+            return this.Name;
         }
     }
 }

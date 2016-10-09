@@ -1,4 +1,8 @@
-﻿namespace Maze.Nodes
+﻿using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
+
+namespace Maze.Nodes
 {
     public enum NodeKind
     {
@@ -6,25 +10,43 @@
 
         Text,
 
-        Unary,
+        MultiItem,
 
-        Item,
+        Token,
 
-        UnaryItem,
-
-        Binary,
-
-        Complex
+        ElementToken
     }
 
-    public interface ITokenNode<TToken>
+    public interface ITokenNode : INodeContainer
     {
-        TToken Token { get; }
+        Token Token { get; }
+
+        Node this[TokenConnection connection] { get; }
+    }
+
+    public interface ITokenNode<TToken> : ITokenNode
+        where TToken : Token
+    {
+        new TToken Token { get; }
+
+        Node WithToken(TToken replacement);
+    }
+
+    public interface IElementNode<out TElement> : INodeContainer, ITokenNode
+    {
+        TElement Element { get; }
+    }
+
+    public interface INodeContainer
+    {
+        IEnumerable<Node> GetNodes();
+
+        Node ReplaceNode(Node item, Node replacement);
     }
 
     public abstract class Node
     {
-        protected Node()
+        internal Node()
         {
         }
 
@@ -34,20 +56,5 @@
         {
             return NodeFactory.Text(text);
         }
-    }
-
-    public abstract class TokenNode<TToken> : Node, ITokenNode<TToken>
-        where TToken : Token
-    {
-        protected TokenNode()
-        {
-        }
-
-        protected TokenNode(TToken token)
-        {
-            this.Token = token;
-        }
-
-        public TToken Token { get; }
     }
 }

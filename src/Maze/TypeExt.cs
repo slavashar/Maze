@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
 namespace Maze
@@ -79,6 +80,18 @@ namespace Maze
         internal static TResult CallGenericMethod<T, TResult>(Func<T, TResult> method, T arg, params Type[] typeArgs)
         {
             return (TResult)method.Method.GetGenericMethodDefinition().MakeGenericMethod(typeArgs).Invoke(method.Target, new object[] { arg });
+        }
+
+        internal static System.Reflection.MethodInfo GetMethodDefinition(Expression<Func<object>> methodCall)
+        {
+            if (methodCall.Body.NodeType != ExpressionType.Call)
+            {
+                throw new InvalidOperationException("Expression should be a method call");
+            }
+
+            var method = ((MethodCallExpression)methodCall.Body).Method;
+
+            return method.GetGenericMethodDefinition();
         }
     }
 }
