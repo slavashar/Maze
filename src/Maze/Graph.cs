@@ -31,12 +31,12 @@ namespace Maze
             get { return EmptyGraph; }
         }
 
-        public IEnumerable<TNode> Nodes
+        public ISet<TNode> Nodes
         {
             get { return this.nodes; }
         }
 
-        public IEnumerable<Edge> Edges
+        public ISet<Edge> Edges
         {
             get { return this.edges; }
         }
@@ -80,7 +80,8 @@ namespace Maze
 
         public struct Edge
         {
-            private readonly TNode source, target;
+            private readonly TNode source;
+            private readonly TNode target;
 
             public Edge(TNode source, TNode target)
             {

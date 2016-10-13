@@ -68,7 +68,7 @@
     <Compile Include="Linq\Operator.IfThen.cs" />
     <Compile Include="Linq\Queryable.ConditionalSelect.cs" />
     <Compile Include="ExpressionNodeBuilder.cs" />
-    <Compile Include="MappingNodeParser.cs" />
+    <Compile Include="MappingNodeBuilder.cs" />
     <Compile Include="Mappings\CombinedComponentMapping.cs" />
     <Compile Include="Mappings\ComponentMapping.cs" />
     <Compile Include="Mappings\ComponentMappingReference.cs" />
@@ -84,9 +84,10 @@
     <Compile Include="Mappings\ContainerReference.cs" />
     <Compile Include="Mappings\AnonymousMapping.cs" />
     <Compile Include="Mappings\MappingReference.cs" />
+    <Compile Include="Mappings\ProxyMapping.cs" />
+    <Compile Include="NodeStringifyExtension.cs" />
     <Compile Include="Nodes\ElementNode.cs" />
     <Compile Include="Nodes\EmptyNode.cs" />
-    <Compile Include="Nodes\IParentNodeProvider.cs" />
     <Compile Include="Nodes\MappingTokens.cs" />
     <Compile Include="Nodes\MultiItemNode.cs" />
     <Compile Include="Nodes\Node.cs" />
@@ -96,6 +97,8 @@
     <Compile Include="Nodes\Token.cs" />
     <Compile Include="Nodes\ExpressionTokens.cs" />
     <Compile Include="Nodes\TokenNode.cs" />
+    <Compile Include="DetailedReactiveCompilerService.cs" />
+    <Compile Include="Reactive\ObservableTracker.cs" />
     <Compile Include="ReactiveCompilerService.cs" />
     <Compile Include="IMappingCompilerService.cs" />
     <Compile Include="Linq\Operator.Switch.cs" />

@@ -28,5 +28,10 @@ namespace Maze.Reactive
         {
             return new Where<TSource>(source, predicate);
         }
+
+        public static IObservable<TElement> Track<TElement>(this IObservable<TElement> source, ObservableTracker<TElement> traker)
+        {
+            return traker.Attach(source);
+        }
     }
 }

@@ -5,15 +5,13 @@ using System.Linq.Expressions;
 
 namespace Maze.Mappings
 {
-    public class EnumerableMapping<TElement> : IMapping<TElement>
+    public sealed class EnumerableMapping<TElement> : IMapping<TElement>
     {
-        private LambdaExpression expression;
-
         public EnumerableMapping(string name, IEnumerable<TElement> enumerable)
         {
             this.Name = name ?? ("Source: " + typeof(TElement).Name);
             this.Enumerable = enumerable;
-            this.expression = System.Linq.Expressions.Expression.Lambda(System.Linq.Expressions.Expression.Constant(enumerable));
+            this.Expression = System.Linq.Expressions.Expression.Lambda(System.Linq.Expressions.Expression.Constant(enumerable));
         }
 
         public Type ElementType
@@ -25,10 +23,7 @@ namespace Maze.Mappings
 
         public IEnumerable<TElement> Enumerable { get; }
 
-        public LambdaExpression Expression
-        {
-            get { return this.expression; }
-        }
+        public LambdaExpression Expression { get; }
 
         public ImmutableDictionary<ParameterExpression, IMapping> SourceMappings
         {

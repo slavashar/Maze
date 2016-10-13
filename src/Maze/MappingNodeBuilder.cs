@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using Maze.Mappings;
 using Maze.Nodes;
 
 namespace Maze
 {
-    public class MappingNodeParser
+    public class MappingNodeBuilder
     {
-        public Node Visit(MappingContainer container)
+        public Node CreateContainerNode(MappingContainer container)
         {
             var dictionary = ImmutableDictionary<IMapping, Node>.Empty;
 
@@ -17,7 +15,7 @@ namespace Maze
 
             foreach (var mapping in container.ExecutionQueue)
             {
-                node = this.CreateNode(mapping, container, dictionary);
+                node = this.CreateMappingNode(mapping, container, dictionary);
 
                 dictionary = dictionary.Add(mapping, node);
             }
@@ -25,11 +23,13 @@ namespace Maze
             return node;
         }
 
-        private Node CreateNode(IMapping mapping, MappingContainer container, ImmutableDictionary<IMapping, Node> dictionary)
+        private Node CreateMappingNode(IMapping mapping, MappingContainer container, ImmutableDictionary<IMapping, Node> dictionary)
         {
-            var parents = mapping.SourceMappings.Values.Select(x => dictionary[container.GetSourceMapping(x)]).ToList();
+            var parents = mapping.SourceMappings.Values.Select(x => dictionary[x]).ToList();
 
-            var node = NodeFactory.ItemNode(mapping, MappingTokens.Node, NodeFactory.Text(mapping.Name));
+            Node node = NodeFactory.Build(mapping, MappingTokens.Node)
+                .Add(x => x.Name, NodeFactory.Text(mapping.Name))
+                .Add(x => x.Expression, ExpressionNodeBuilder.Parse(mapping.Expression));
 
             if (parents.Count == 0)
             {

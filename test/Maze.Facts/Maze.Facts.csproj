@@ -105,10 +105,13 @@
     <Compile Include="MappingFacts.cs" />
     <Compile Include="ExpressionNodeBuilderFacts.cs" />
     <Compile Include="ExpressionExtFacts.cs" />
-    <Compile Include="MappingNodeParserFacts.cs" />
+    <Compile Include="MappingNodeBuilderFacts.cs" />
     <Compile Include="MergeJoinFacts.cs" />
+    <Compile Include="MetricObservableRewriterFacts.cs" />
     <Compile Include="NodeFacts.cs" />
+    <Compile Include="NodeGraphFacts.cs" />
     <Compile Include="ObservableRewriterFacts.cs" />
+    <Compile Include="ObservableTrackerFacts.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ShouldExpressionExtension.cs" />
     <Compile Include="StringifyNodeFacts.cs" />

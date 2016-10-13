@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace Maze.Mappings
 {
-    public class ExpressionMapping<TElement> : IMapping<TElement>
+    public sealed class ExpressionMapping<TElement> : IMapping<TElement>
     {
         public ExpressionMapping(string name, LambdaExpression expression, ImmutableDictionary<ParameterExpression, IMapping> sourceMappings)
         {

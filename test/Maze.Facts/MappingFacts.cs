@@ -73,6 +73,22 @@ namespace Maze.Facts
         }
 
         [Fact]
+        public void create_expression_mapping_from_component_mapping()
+        {
+            var sourceComponent = Engine.MapComponent((IQueryable<int> src) => new { Items = src });
+
+            var mapping = sourceComponent.Map(src => from x in src.Items select x);
+
+            var exprMapping = mapping.Instance.ShouldBeType<ExpressionMapping<int>>();
+
+            mapping.Mappings.ShouldEqual(sourceComponent.Mappings.Single(), exprMapping);
+            mapping.Components.ShouldEqual(sourceComponent.Instance);
+
+            exprMapping.Expression.ShouldEqualExpression<Func<IQueryable<int>, IQueryable<int>>>(src_Items => from x in src_Items select x);
+            exprMapping.SourceMappings.Values.ShouldEqual(sourceComponent.Mappings.Single());
+        }
+
+        [Fact]
         public void create_anonymous_component_with_enumerable_mapping()
         {
             var source = new int[0];
@@ -308,11 +324,26 @@ namespace Maze.Facts
         [Fact]
         public void create_combined_mapping()
         {
-            var first = Engine.MapComponent((IQueryable<int> src) => new { Src = src });            
+            var first = Engine.Map((IQueryable<int> src) => src);
+            var second = Engine.Map((IQueryable<string> src) => src);
+
+            var mapping = Engine.Combine(first, second);
+
+            mapping.Mappings.ShouldEqual(first.Instance, second.Instance);
+            mapping.Components.ShouldEqual(mapping.Instance);
+
+            mapping.Instance.Mappings["First"].ShouldBe(first.Instance);
+            mapping.Instance.Mappings["Second"].ShouldBe(second.Instance);
+        }
+
+        [Fact]
+        public void create_combined_component()
+        {
+            var first = Engine.MapComponent((IQueryable<int> src) => new { Src = src });
             var second = Engine.MapComponent((IQueryable<string> src) => new { Src = src });
 
             var mapping = Engine.Combine(first, second);
-            
+
             mapping.Mappings.ShouldEqual(first.Instance.Mappings["Src"], second.Instance.Mappings["Src"]);
             mapping.Components.ShouldEqual(first.Instance, second.Instance, mapping.Instance);
 

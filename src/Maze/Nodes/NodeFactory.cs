@@ -150,6 +150,44 @@ namespace Maze.Nodes
                 .SelectMany(result => result.Kind == NodeKind.MultiItem ? ((MultiItemNode)result) : Linq.Enumerable.Return(result));
         }
 
+        public static Graph<Node> ToGraph(this Node node)
+        {
+            var graph = Graph.CreateNode(node);
+
+            var stack = new Stack<Node>();
+            stack.Push(node);
+
+            while (stack.Count > 0)
+            {
+                node = stack.Pop();
+
+                if (node.Kind == NodeKind.MultiItem)
+                {
+                    foreach (var parent in (MultiItemNode)node)
+                    {
+                        stack.Push(parent);
+
+                        graph = graph
+                            .CreateNode(parent)
+                            .CreateEdge(parent, node);
+                    }
+                }
+                else if (node.Kind == NodeKind.Token || node.Kind == NodeKind.ElementToken)
+                {
+                    foreach (var parent in ((ITokenNode)node).GetParents())
+                    {
+                        stack.Push(parent);
+
+                        graph = graph
+                            .CreateNode(parent)
+                            .CreateEdge(parent, node);
+                    }
+                }
+            }
+
+            return graph;
+        }
+
         public static ElementNodeBuilder<TElement, TToken> Build<TElement, TToken>(TElement element, TToken token)
             where TToken : Token, IElementToken<TElement>
         {
@@ -160,6 +198,12 @@ namespace Maze.Nodes
             where TToken : Token
         {
             return TokenNodeSelection<TToken>.Create(node, token);
+        }
+
+        public static TokenNodeSelection<TToken> Find<TToken>(this Node node, params TToken[] tokens)
+            where TToken : Token
+        {
+            return TokenNodeSelection<TToken>.Create(node, tokens);
         }
 
         public static ElementNodeSelection<T> Find<T>(this Node node, Func<IElementNode<T>, bool> predicate)
@@ -248,6 +292,13 @@ namespace Maze.Nodes
                 var set = new HashSet<Node>();
                 Flat(set, node);
                 return new TokenNodeSelection<TToken>(node, ImmutableHashSet.CreateRange(set.OfType<ITokenNode<TToken>>().Where(x => x.Token == token).Cast<Node>()));
+            }
+
+            internal static TokenNodeSelection<TToken> Create(Node node, TToken[] tokens)
+            {
+                var set = new HashSet<Node>();
+                Flat(set, node);
+                return new TokenNodeSelection<TToken>(node, ImmutableHashSet.CreateRange(set.OfType<ITokenNode<TToken>>().Where(x => tokens.Contains(x.Token)).Cast<Node>()));
             }
         }
 

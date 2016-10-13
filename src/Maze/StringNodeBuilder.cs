@@ -5,16 +5,6 @@ using Maze.Nodes;
 
 namespace Maze
 {
-    public static class MappingNodeStringifyExtension
-    {
-        private static readonly TextSyntaxNodeVisitor Builder = new TextSyntaxNodeVisitor();
-
-        public static string Stringify(this Node node)
-        {
-            return Builder.VisitNode(node).Print();
-        }
-    }
-
     public abstract class NodeVisitor<TResult>
     {
         public virtual TResult VisitNode(Node node)
@@ -53,7 +43,6 @@ namespace Maze
                     if (item == null)
                     {
                         throw new InvalidOperationException();
-                        //return this.VisitEmptySyntax();
                     }
 
                     if (syntax.Kind == SyntaxKind.NodeContainer && item.Kind == NodeKind.MultiItem)

@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Reflection;
 using Maze.Reactive;
 using AbstractTypeEmitter = Castle.DynamicProxy.Generators.Emitters.AbstractTypeEmitter;
@@ -191,6 +192,12 @@ namespace Maze
                 new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).Method.GetGenericMethodDefinition(),
                 new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).Method.GetGenericMethodDefinition()
             },
+
+            [new Func<IQueryable<object>, IQueryable<object>, IQueryable<object>>(Queryable.Union).Method.GetGenericMethodDefinition()] = new[]
+            {
+                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).Method.GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Union).Method.GetGenericMethodDefinition()
+            },
         };
 
         private readonly ModuleScope scope;
@@ -203,45 +210,70 @@ namespace Maze
         {
         }
 
-        private ObservableRewriter(ModuleScope scope, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
+        public ObservableRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap)
+            : this(new ModuleScope(), parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty)
+        {
+        }
+
+        protected ObservableRewriter(ModuleScope scope, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
         {
             this.scope = scope;
             this.parameterMap = parameterMap;
             this.memberMap = memberMap;
         }
 
-        public static LambdaExpression ChangeParameters(LambdaExpression lambda)
+        protected ModuleScope Scope
+        {
+            get { return this.scope; }
+        }
+
+        public static ImmutableDictionary<ParameterExpression, ParameterExpression> ChangeParameters(
+            System.Collections.ObjectModel.ReadOnlyCollection<ParameterExpression> parameters)
         {
             // Convert the parameter to observable
-            var newParams = Visit(lambda.Parameters, VisitLambdaParameter);
+            var newParams = Visit(parameters, VisitLambdaParameter);
 
-            var mapParams = ImmutableDictionary<ParameterExpression, ParameterExpression>.Empty;
+            var builder = ImmutableDictionary.CreateBuilder<ParameterExpression, ParameterExpression>();
 
             // add changed parameters to the dictionary
-            if (newParams != lambda.Parameters)
+            if (newParams != parameters)
             {
-                for (var i = 0; i < lambda.Parameters.Count; i++)
+                for (var i = 0; i < parameters.Count; i++)
                 {
-                    if (lambda.Parameters[i] != newParams[i])
+                    if (parameters[i] != newParams[i])
                     {
-                        mapParams = mapParams.Add(lambda.Parameters[i], newParams[i]);
+                        builder.Add(parameters[i], newParams[i]);
                     }
                 }
             }
 
+            return builder.ToImmutable();
+        }
+
+        public static LambdaExpression ChangeParameters(LambdaExpression lambda)
+        {
+            var mapParams = ChangeParameters(lambda.Parameters);
+
             var visitor = new ObservableRewriter(new ModuleScope(), mapParams, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty);
 
-            var expr = visitor.Visit(lambda.Body);
+            return (LambdaExpression)visitor.Visit(lambda);
+        }
+
+        protected override Expression VisitLambda<T>(Expression<T> lambda)
+        {
+            var parameters = Visit(lambda.Parameters, x => this.parameterMap.GetValueOrDefault(x, x));
+
+            var body = this.Visit(lambda.Body);
 
             // if nothing changed return the original expression
-            if (newParams == lambda.Parameters && expr == lambda.Body)
+            if (parameters == lambda.Parameters && body == lambda.Body)
             {
                 return lambda;
             }
 
-            var type = lambda.Type.GetGenericTypeDefinition().MakeGenericType(newParams.Select(x => x.Type).Concat(new[] { expr.Type }).ToArray());
+            var type = lambda.Type.GetGenericTypeDefinition().MakeGenericType(parameters.Select(x => x.Type).Concat(new[] { body.Type }).ToArray());
 
-            return Expression.Lambda(type, expr, newParams);
+            return Expression.Lambda(type, body, parameters);
         }
 
         protected override Expression VisitNew(NewExpression newexpr)
@@ -299,8 +331,7 @@ namespace Maze
 
         protected override Expression VisitParameter(ParameterExpression parameter)
         {
-            ParameterExpression newParam;
-            return this.parameterMap.TryGetValue(parameter, out newParam) ? newParam : parameter;
+            return this.parameterMap.GetValueOrDefault(parameter, parameter);
         }
 
         protected override Expression VisitMember(MemberExpression node)
@@ -407,7 +438,7 @@ namespace Maze
                                      : methodArgs[Array.IndexOf(genericOriginalArgs, p)])
                         .ToImmutableArray();
 
-                    exprArgs[index] = ObservableUnderlyingRewriter.VisitUnderlyingLambda(this.scope, this.parameterMap, this.memberMap, underlyings, lambda);
+                    exprArgs[index] = VisitUnderlyingLambda(this, this.parameterMap, this.memberMap, underlyings, lambda);
 
                     var returnParam = genericArgumentType.GetGenericArguments().Last();
                     var returnParamArguments = returnParam.GetGenericArguments();
@@ -496,6 +527,11 @@ namespace Maze
             return Expression.New(type.GetConstructors().Single(), arguments, members.Select(name => type.GetProperty(name)));
         }
 
+        protected virtual ObservableRewriter CreateNestedRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
+        {
+            return new ObservableRewriter(this.scope, parameterMap, memberMap);
+        }
+
         private static ParameterExpression VisitLambdaParameter(ParameterExpression parameter)
         {
             var type = VisitType(parameter.Type);
@@ -533,136 +569,199 @@ namespace Maze
             return type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(IEnumerable<>) || type.GetGenericTypeDefinition() == typeof(IQueryable<>));
         }
 
-        private class ObservableUnderlyingRewriter : ObservableRewriter
+        private static Expression VisitUnderlyingLambda(ObservableRewriter current, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap, ImmutableArray<Type> parameterTypes, LambdaExpression lambda)
         {
-            public ObservableUnderlyingRewriter(ModuleScope scope, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
-                : base(scope, parameterMap, memberMap)
+            var parameters = new List<ParameterExpression>();
+
+            var observableParameters = new Dictionary<ParameterExpression, Expression>();
+
+            for (int index = 0; index < lambda.Parameters.Count; index++)
             {
-            }
+                var parameter = lambda.Parameters[index];
 
-            public static Expression VisitUnderlyingLambda(ModuleScope scope, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap, ImmutableArray<Type> parameterTypes, LambdaExpression lambda)
-            {
-                var parameters = new List<ParameterExpression>();
-
-                var observableParameters = new Dictionary<ParameterExpression, Expression>();
-
-                for (int index = 0; index < lambda.Parameters.Count; index++)
+                if (parameter.Type == parameterTypes[index])
                 {
-                    var parameter = lambda.Parameters[index];
+                    parameters.Add(parameter);
+                    continue;
+                }
 
-                    if (parameter.Type == parameterTypes[index])
+                var foundObs = parameterTypes[index].FindGenericType(typeof(IObservable<>));
+
+                if (foundObs != null)
+                {
+                    var foundEnum = parameter.Type.FindGenericType(typeof(IEnumerable<>)) ?? parameter.Type.FindGenericType(typeof(IQueryable<>));
+
+                    // original parameter was enumerable
+                    if (foundEnum != null)
                     {
-                        parameters.Add(parameter);
-                        continue;
-                    }
-
-                    var foundObs = parameterTypes[index].FindGenericType(typeof(IObservable<>));
-
-                    if (foundObs != null)
-                    {
-                        var foundEnum = parameter.Type.FindGenericType(typeof(IEnumerable<>)) ?? parameter.Type.FindGenericType(typeof(IQueryable<>));
-
-                        // original parameter was enumerable
-                        if (foundEnum != null)
+                        if (foundObs.GetGenericArguments()[0] != foundEnum.GetGenericArguments()[0])
                         {
-                            if (foundObs.GetGenericArguments()[0] != foundEnum.GetGenericArguments()[0])
-                            {
-                                throw new InvalidOperationException();
-                            }
-
-                            var param = Expression.Parameter(parameterTypes[index], parameter.Name);
-
-                            parameters.Add(param);
-                            parameterMap = parameterMap.Add(parameter, param);
-
-                            continue;
+                            throw new InvalidOperationException();
                         }
 
-                        // original parameter was an element
-                        else
-                        {
-                            if (foundObs.GetGenericArguments()[0] != parameter.Type)
-                            {
-                                throw new InvalidOperationException();
-                            }
-
-                            var obsparam = Expression.Parameter(parameterTypes[index], parameter.Name);
-                            parameters.Add(obsparam);
-
-                            var param = Expression.Parameter(parameter.Type, "__" + parameter.Name);
-
-                            parameterMap = parameterMap.Add(parameter, param);
-                            observableParameters.Add(param, obsparam);
-
-                            continue;
-                        }
-                    }
-
-                    // dynamic parameter
-                    else
-                    {
                         var param = Expression.Parameter(parameterTypes[index], parameter.Name);
+
                         parameters.Add(param);
                         parameterMap = parameterMap.Add(parameter, param);
 
-                        // create parameter for every property changed from concrete type to observable
-                        foreach (var prop in parameterTypes[index].GetProperties().Select(p => new { member = p, obs = p.PropertyType.FindGenericType(typeof(IObservable<>)) })
-                            .Where(x => x.obs != null))
+                        continue;
+                    }
+
+                    // original parameter was an element
+                    else
+                    {
+                        if (foundObs.GetGenericArguments()[0] != parameter.Type)
                         {
-                            var originalMember = parameter.Type.GetProperty(prop.member.Name);
-
-                            // avoid if the original property was enumerable
-                            if (!IsEnumerableType(originalMember.PropertyType))
-                            {
-                                var memberparam = Expression.Parameter(originalMember.PropertyType, "__" + parameter.Name + "_" + prop.member.Name);
-
-                                memberMap = memberMap.Add(originalMember, memberparam);
-                                observableParameters.Add(memberparam, Expression.Property(param, prop.member));
-                            }
+                            throw new InvalidOperationException();
                         }
+
+                        var obsparam = Expression.Parameter(parameterTypes[index], parameter.Name);
+                        parameters.Add(obsparam);
+
+                        var param = Expression.Parameter(parameter.Type, "__" + parameter.Name);
+
+                        parameterMap = parameterMap.Add(parameter, param);
+                        observableParameters.Add(param, obsparam);
 
                         continue;
                     }
                 }
 
-                var rewriter = new ObservableUnderlyingRewriter(scope, parameterMap, memberMap);
-
-                var body = rewriter.Visit(lambda.Body);
-
-                if (observableParameters.Count == 0)
+                // dynamic parameter
+                else
                 {
-                    return Expression.Lambda(body, parameters);
-                }
+                    var param = Expression.Parameter(parameterTypes[index], parameter.Name);
+                    parameters.Add(param);
+                    parameterMap = parameterMap.Add(parameter, param);
 
-                // try to simplify the body
-                if (body.NodeType == ExpressionType.Parameter)
-                {
-                    Expression expr;
-                    if (observableParameters.TryGetValue((ParameterExpression)body, out expr))
+                    // create parameter for every property changed from concrete type to observable
+                    foreach (var prop in parameterTypes[index].GetProperties().Select(p => new { member = p, obs = p.PropertyType.FindGenericType(typeof(IObservable<>)) })
+                        .Where(x => x.obs != null))
                     {
-                        return Expression.Lambda(expr, parameters);
+                        var originalMember = parameter.Type.GetProperty(prop.member.Name);
+
+                        // avoid if the original property was enumerable
+                        if (!IsEnumerableType(originalMember.PropertyType))
+                        {
+                            var memberparam = Expression.Parameter(originalMember.PropertyType, "__" + parameter.Name + "_" + prop.member.Name);
+
+                            memberMap = memberMap.Add(originalMember, memberparam);
+                            observableParameters.Add(memberparam, Expression.Property(param, prop.member));
+                        }
                     }
+
+                    continue;
                 }
-
-                if (observableParameters.Count == 1)
-                {
-                    var select = new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition();
-
-                    var tp = observableParameters.Single();
-
-                    var call = Expression.Call(select.MakeGenericMethod(tp.Key.Type, body.Type), tp.Value, Expression.Lambda(body, tp.Key));
-
-                    return Expression.Lambda(call, parameters);
-                }
-
-                var combineLatest = typeof(Observable).GetMethods().Single(x => x.Name == "CombineLatest" && x.GetParameters().Length == observableParameters.Count + 1).GetGenericMethodDefinition();
-
-                var combineLatestCall = Expression.Call(
-                    combineLatest.MakeGenericMethod(observableParameters.Keys.Select(x => x.Type).Concat(new[] { body.Type }).ToArray()),
-                    observableParameters.Values.Concat(new[] { Expression.Lambda(body, observableParameters.Keys) }));
-
-                return Expression.Lambda(combineLatestCall, parameters);
             }
+
+            var rewriter = current.CreateNestedRewriter(parameterMap, memberMap);
+
+            var body = rewriter.Visit(lambda.Body);
+
+            if (observableParameters.Count == 0)
+            {
+                return Expression.Lambda(body, parameters);
+            }
+
+            // try to simplify the body
+            if (body.NodeType == ExpressionType.Parameter)
+            {
+                Expression expr;
+                if (observableParameters.TryGetValue((ParameterExpression)body, out expr))
+                {
+                    return Expression.Lambda(expr, parameters);
+                }
+            }
+
+            if (observableParameters.Count == 1)
+            {
+                var select = new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition();
+
+                var tp = observableParameters.Single();
+
+                var call = Expression.Call(select.MakeGenericMethod(tp.Key.Type, body.Type), tp.Value, Expression.Lambda(body, tp.Key));
+
+                return Expression.Lambda(call, parameters);
+            }
+
+            var combineLatest = typeof(Observable).GetMethods().Single(x => x.Name == "CombineLatest" && x.GetParameters().Length == observableParameters.Count + 1).GetGenericMethodDefinition();
+
+            var combineLatestCall = Expression.Call(
+                combineLatest.MakeGenericMethod(observableParameters.Keys.Select(x => x.Type).Concat(new[] { body.Type }).ToArray()),
+                observableParameters.Values.Concat(new[] { Expression.Lambda(body, observableParameters.Keys) }));
+
+            return Expression.Lambda(combineLatestCall, parameters);
+        }
+    }
+
+    public class MetricObservableRewriter : ObservableRewriter
+    {
+        private readonly Dictionary<Expression, ObservableTracker> trackers;
+
+        public MetricObservableRewriter()
+        {
+        }
+
+        public MetricObservableRewriter(
+            ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap,
+            params Expression[] tracking)
+            : base(parameterMap)
+        {
+            this.trackers = tracking.ToDictionary(x => x, x => (ObservableTracker)null);
+        }
+
+        protected MetricObservableRewriter(
+            ModuleScope scope,
+            ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap,
+            ImmutableDictionary<MemberInfo, ParameterExpression> memberMap,
+            Dictionary<Expression, ObservableTracker> trackers)
+            : base (scope, parameterMap, memberMap)
+        {
+            this.trackers = trackers;
+        }
+
+        public Dictionary<Expression, ObservableTracker> Trackers
+        {
+            get { return this.trackers; }
+        }
+
+        protected override Expression VisitParameter(ParameterExpression parameter)
+        {
+            return this.Attach(parameter, base.VisitParameter(parameter));
+        }
+
+        protected override Expression VisitMethodCall(MethodCallExpression methodCall)
+        {
+            return this.Attach(methodCall, base.VisitMethodCall(methodCall));
+        }
+
+        protected override ObservableRewriter CreateNestedRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
+        {
+            return new MetricObservableRewriter(this.Scope, parameterMap, memberMap, this.trackers);
+        }
+
+        private Expression Attach(Expression key, Expression expression)
+        {
+            if (!this.trackers.ContainsKey(key) || this.trackers[key] != null)
+            {
+                return expression;
+            }
+
+            var type = expression.Type.FindGenericType(typeof(IObservable<>)).GenericTypeArguments.Single();
+
+            var tracker = (ObservableTracker)Activator.CreateInstance(typeof(ObservableTracker<>).MakeGenericType(type));
+
+            this.trackers[key] = tracker;
+
+            var trackMethod = TypeExt.GetMethodDefinition(() => ObservableMaze.Track<object>(null, null)).MakeGenericMethod(type);
+            var publishMethod = TypeExt.GetMethodDefinition(() => Observable.Publish<object>(null)).MakeGenericMethod(type);
+            var refCountMethod = TypeExt.GetMethodDefinition(() => Observable.RefCount<object>(null)).MakeGenericMethod(type);
+
+            var track = Expression.Call(trackMethod, expression, Expression.Constant(tracker));
+            var publish = Expression.Call(publishMethod, track);
+            var refCount = Expression.Call(refCountMethod, publish);
+
+            return refCount;
         }
     }
 }

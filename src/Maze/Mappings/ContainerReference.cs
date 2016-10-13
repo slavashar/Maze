@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Maze.Mappings
 {
@@ -31,6 +32,15 @@ namespace Maze.Mappings
             get { return this.container.Components; }
         }
 
+        internal static ComponentMappingReference<CombinedComponentMapping<IQueryable<TElementFirst>, IQueryable<TElementFirst>>.Component> Combine<TElementFirst, TElementSecond>(
+            MappingReference<TElementFirst> first, MappingReference<TElementSecond> second)
+        {
+            var instance = new CombinedComponentMapping<IQueryable<TElementFirst>, IQueryable<TElementFirst>>.MergedComponentMappingProxy(first.Instance, second.Instance);
+
+            return new ComponentMappingReference<CombinedComponentMapping<IQueryable<TElementFirst>, IQueryable<TElementFirst>>.Component>(
+                instance, MappingContainer.Merge(first.container, second.container).Add(instance));
+        }
+
         internal static ComponentMappingReference<CombinedComponentMapping<TComponentFirst, TComponentSecond>.Component> Combine<TComponentFirst, TComponentSecond>(
             ComponentMappingReference<TComponentFirst> first, ComponentMappingReference<TComponentSecond> second)
         {
@@ -55,7 +65,7 @@ namespace Maze.Mappings
             return new ComponentMappingReference<TComponent>(instance, this.container.Add(instance));
         }
 
-        internal ContainerReference Add(ContainerReference mappingContainer)
+        internal ContainerReference Merge(ContainerReference mappingContainer)
         {
             return new ContainerReference(MappingContainer.Merge(this.container, mappingContainer.container));
         }

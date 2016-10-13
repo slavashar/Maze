@@ -17,7 +17,7 @@ namespace Maze
         {
             var node = new object();
 
-            var graph = Graph<object>.Empty
+            var graph = Graph
                 .CreateNode(node);
 
             graph.Nodes.ShouldEqual(node);
@@ -28,7 +28,7 @@ namespace Maze
         {
             object sourceNode = new object(), targetNode = new object();
 
-            var graph = Graph<object>.Empty
+            var graph = Graph
                 .CreateNode(sourceNode)
                 .CreateNode(targetNode)
                 .CreateEdge(sourceNode, targetNode);
@@ -41,7 +41,7 @@ namespace Maze
         {
             object sourceNode = new object(), targetNode = new object();
 
-            var graph = Graph<object>.Empty
+            var graph = Graph
                 .CreateNode(sourceNode)
                 .CreateNode(targetNode)
                 .CreateEdge(sourceNode, targetNode)

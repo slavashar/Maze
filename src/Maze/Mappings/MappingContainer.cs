@@ -94,7 +94,7 @@ namespace Maze.Mappings
 
             var missingSources = firstContainer.missingSources.Union(secondContainer.missingSources);
 
-            var typeLookup = mappings.ToLookup(x => x.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single());
+            var typeLookup = mappings.ToLookup(x => x.GetElementType());
 
             foreach (var missing in missingSources)
             {
@@ -115,23 +115,7 @@ namespace Maze.Mappings
                 }
             }
 
-            while (true)
-            {
-                var detached = detachedMappings
-                    .Where(m => m.SourceMappings.Values.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
-                    .ToList();
-
-                if (detached.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var mapping in detached)
-                {
-                    executionQueue = executionQueue.Enqueue(mapping);
-                    detachedMappings = detachedMappings.Remove(mapping);
-                }
-            }
+            ResolveDetachedMappings(ref executionQueue, ref detachedMappings, anonymousSources);
 
             return new MappingContainer(
                 mappings,
@@ -158,25 +142,25 @@ namespace Maze.Mappings
 
             if (anonymouses.Any())
             {
-                var typeLookup = this.mappings.ToLookup(x => x.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single());
+                var typeLookup = this.mappings.ToLookup(x => x.GetElementType());
 
                 var sourceAvailable = true;
 
                 foreach (var anonymous in anonymouses)
                 {
-                    var proposedSources = typeLookup[anonymous.ElementType].ToList();
+                    var proposedSources = typeLookup[anonymous.ElementType];
 
-                    switch (proposedSources.Count)
+                    switch (proposedSources.Count())
                     {
                         case 0:
                             missingSources = missingSources.Add(anonymous);
                             sourceAvailable = false;
                             break;
                         case 1:
-                            anonymousSources = anonymousSources.Add(anonymous, proposedSources[0]);
+                            anonymousSources = anonymousSources.Add(anonymous, proposedSources.Single());
                             if (sourceAvailable)
                             {
-                                sourceAvailable = executionQueue.Contains(proposedSources[0]);
+                                sourceAvailable = executionQueue.Contains(proposedSources.Single());
                             }
 
                             break;
@@ -187,7 +171,9 @@ namespace Maze.Mappings
 
                 if (sourceAvailable && instance.SourceMappings.Values.Except(anonymouses).All(executionQueue.Contains))
                 {
-                    executionQueue = executionQueue.Enqueue(instance);
+                    var sources = instance.SourceMappings.ToImmutableDictionary(x => x.Key, x => x.Value is IAnonymousMapping ? anonymousSources[(IAnonymousMapping)x.Value] : x.Value);
+
+                    executionQueue = executionQueue.Enqueue(new ProxyMapping<TElement>(instance, sources));
                 }
                 else
                 {
@@ -212,23 +198,7 @@ namespace Maze.Mappings
                 missingSources = missingSources.Remove(missing);
             }
 
-            while (true)
-            {
-                var detached = detachedMappings
-                    .Where(m => m.SourceMappings.Values.All(x => executionQueue.Contains(x is IAnonymousMapping ? anonymousSources.GetValueOrDefault((IAnonymousMapping)x) : x)))
-                    .ToList();
-
-                if (detached.Count == 0)
-                {
-                    break;
-                }
-
-                foreach (var mapping in detached)
-                {
-                    executionQueue = executionQueue.Enqueue(mapping);
-                    detachedMappings = detachedMappings.Remove(mapping);
-                }
-            }
+            ResolveDetachedMappings(ref executionQueue, ref detachedMappings, anonymousSources);
 
             return new MappingContainer(
                 this.mappings.Add(instance),
@@ -248,11 +218,12 @@ namespace Maze.Mappings
 
             var container = this;
 
-            foreach (var item in instance.Mappings.Values)
-            {
-                var type = item.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single();
+            var addeMethod = TypeExt.GetMethodDefinition(() => this.Add((IMapping<object>)null));
 
-                container = TypeExt.InvokeGenericMethod<MappingContainer>(new Func<IMapping<object>, MappingContainer>(container.Add), type, item);
+            foreach (var mapping in instance.Mappings.Values)
+            {
+                container = (MappingContainer)addeMethod
+                    .MakeGenericMethod(mapping.GetElementType()).Invoke(container, new object[] { mapping });
             }
 
             return new MappingContainer(
@@ -264,10 +235,70 @@ namespace Maze.Mappings
                 container.missingSources);
         }
 
-        // TODO: get rid of this
-        public IMapping GetSourceMapping(IMapping mapping)
+        private static void ResolveDetachedMappings(
+            ref ImmutableQueue<IMapping> executionQueue, ref ImmutableHashSet<IMapping> detachedMappings, ImmutableDictionary<IAnonymousMapping, IMapping> anonymousSources)
         {
-            return mapping is IAnonymousMapping ? this.anonymousSources[(IAnonymousMapping)mapping] : mapping;
+            var queueChanged = true;
+
+            while (queueChanged)
+            {
+                queueChanged = false;
+
+                foreach (var mapping in detachedMappings)
+                {
+                    var allSourceQueued = true;
+                    var containAnonymousSources = false;
+
+                    var builder = ImmutableDictionary.CreateBuilder<ParameterExpression, IMapping>();
+
+                    foreach (var sourceParamMapping in mapping.SourceMappings)
+                    {
+                        IMapping sourceMapping;
+
+                        if (sourceParamMapping.Value is IAnonymousMapping)
+                        {
+                            containAnonymousSources = true;
+                            if (!anonymousSources.TryGetValue((IAnonymousMapping)sourceParamMapping.Value, out sourceMapping))
+                            {
+                                allSourceQueued = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            sourceMapping = sourceParamMapping.Value;
+                        }
+
+                        if (!executionQueue.Contains(sourceMapping))
+                        {
+                            allSourceQueued = false;
+                            break;
+                        }
+
+                        builder.Add(sourceParamMapping.Key, sourceMapping);
+                    }
+
+                    if (allSourceQueued)
+                    {
+                        if (containAnonymousSources)
+                        {
+                            var proxy = (IMapping)Activator.CreateInstance(
+                                typeof(ProxyMapping<>).MakeGenericType(mapping.GetElementType()),
+                                new object[] { mapping, builder.ToImmutable() });
+
+                            executionQueue = executionQueue.Enqueue(proxy);
+                        }
+                        else
+                        {
+                            executionQueue = executionQueue.Enqueue(mapping);
+                        }
+
+                        detachedMappings = detachedMappings.Remove(mapping);
+
+                        queueChanged = true;
+                    }
+                }
+            }
         }
     }
 }

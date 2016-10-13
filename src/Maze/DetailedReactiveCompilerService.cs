@@ -9,9 +9,9 @@ using Maze.Mappings;
 
 namespace Maze
 {
-    public class ReactiveCompilerService : IMappingCompilerService
+    public class DetailedReactiveCompilerService
     {
-        public ExecutionGraph Build(MappingContainer container)
+        public ExecutionGraph Build(MappingContainer container, Expression[] tracking)
         {
             var nodes = new Dictionary<IMapping, ExecutionGraphNode>();
 
@@ -46,7 +46,7 @@ namespace Maze
 
             var mapParams = mapping.Expression.Parameters.ToImmutableDictionary(x => x, x => sourceNodes[x].Paramater);
 
-            var rewriter = new ObservableRewriter(mapParams);
+            var rewriter = new MetricObservableRewriter(mapParams);
 
             var expression = (LambdaExpression)rewriter.Visit(mapping.Expression);
 

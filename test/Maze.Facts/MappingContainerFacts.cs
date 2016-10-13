@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Linq.Expressions;
 using Maze.Mappings;
 using Moq;
@@ -120,7 +121,14 @@ namespace Maze.Facts
                 .Add(anonymousMapping.Object);
 
             container.Mappings.ShouldEqual(anonymousMapping.Object, mapping.Object);
-            container.ExecutionQueue.ShouldEqual(mapping.Object, anonymousMapping.Object);
+
+            container.ExecutionQueue.Count().ShouldEqual(2);
+
+            container.ExecutionQueue.ElementAt(0).ShouldBe(mapping.Object);
+            var proxy = container.ExecutionQueue.ElementAt(1).ShouldBeType<ProxyMapping<object>>();
+
+            proxy.Original.ShouldBe(anonymousMapping.Object);
+            proxy.SourceMappings.Values.Single().ShouldBe(mapping.Object);
         }
 
         [Fact]
@@ -162,7 +170,14 @@ namespace Maze.Facts
                 .Add(mapping.Object);
 
             container.Mappings.ShouldEqual(anonymousMapping.Object, mapping.Object);
-            container.ExecutionQueue.ShouldEqual(mapping.Object, anonymousMapping.Object);
+
+            container.ExecutionQueue.Count().ShouldEqual(2);
+
+            container.ExecutionQueue.ElementAt(0).ShouldBe(mapping.Object);
+            var proxy = container.ExecutionQueue.ElementAt(1).ShouldBeType<ProxyMapping<object>>();
+
+            proxy.Original.ShouldBe(anonymousMapping.Object);
+            proxy.SourceMappings.Values.Single().ShouldBe(mapping.Object);
         }
 
         [Fact]
@@ -186,7 +201,16 @@ namespace Maze.Facts
                 .Add(missingMapping.Object);
 
             container.Mappings.ShouldEqual(anonymousMapping.Object, dependentMapping.Object, missingMapping.Object);
-            container.ExecutionQueue.ShouldEqual(missingMapping.Object, anonymousMapping.Object, dependentMapping.Object);
+
+            container.ExecutionQueue.Count().ShouldEqual(3);
+
+            container.ExecutionQueue.ElementAt(0).ShouldBe(missingMapping.Object);
+
+            var proxy = container.ExecutionQueue.ElementAt(1).ShouldBeType<ProxyMapping<object>>();
+            proxy.Original.ShouldBe(anonymousMapping.Object);
+            proxy.SourceMappings.Values.Single().ShouldBe(missingMapping.Object);
+
+            container.ExecutionQueue.ElementAt(2).ShouldBe(dependentMapping.Object);
         }
 
         [Fact]
@@ -265,7 +289,14 @@ namespace Maze.Facts
             var container = MappingContainer.Merge(firstContainer, secondContainer);
 
             container.Mappings.ShouldEqual(firstMapping.Object, secondMapping.Object);
-            container.ExecutionQueue.ShouldEqual(firstMapping.Object, secondMapping.Object);
+
+            container.ExecutionQueue.Count().ShouldEqual(2);
+
+            container.ExecutionQueue.ElementAt(0).ShouldBe(firstMapping.Object);
+            var proxy = container.ExecutionQueue.ElementAt(1).ShouldBeType<ProxyMapping<object>>();
+
+            proxy.Original.ShouldBe(secondMapping.Object);
+            proxy.SourceMappings.Values.Single().ShouldBe(firstMapping.Object);
         }
 
         [Fact]

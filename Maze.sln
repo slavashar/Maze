@@ -9,6 +9,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Maze.Facts", "test\Maze.Fac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Maze.UX.Web", "src\Maze.UX.Web\Maze.UX.Web.csproj", "{73B3A275-879D-4D9C-A330-B5CC3F5C421E}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B3109A82-2700-4F10-A75B-844A61A068E7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{708DBFBA-B332-4107-A2BD-919C5A80140C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{6FB6E211-4342-4AA0-80E4-B02291D772B0}"
+	ProjectSection(SolutionItems) = preProject
+		nuspecs\Maze.nuspec = nuspecs\Maze.nuspec
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +39,10 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D0352DEF-F1FC-447A-A52E-5FBED901AA42} = {B3109A82-2700-4F10-A75B-844A61A068E7}
+		{E466FB38-0F3D-4D93-96E5-3508AFBC894F} = {708DBFBA-B332-4107-A2BD-919C5A80140C}
+		{73B3A275-879D-4D9C-A330-B5CC3F5C421E} = {B3109A82-2700-4F10-A75B-844A61A068E7}
 	EndGlobalSection
 EndGlobal

@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading.Tasks;
 using Maze.Mappings;
 
 namespace Maze
@@ -100,6 +101,22 @@ namespace Maze
             return mapping.Add(CreateMappingFromExpression<TElement>(name, map, sourceMappings.ToImmutableDictionary()));
         }
 
+        public static MappingReference<TElement> Map<TComponent, TElement>(
+            this ComponentMappingReference<TComponent> mapping, Expression<Func<TComponent, IQueryable<TElement>>> map)
+        {
+            return mapping.Map(null, map);
+        }
+
+        public static MappingReference<TElement> Map<TComponent, TElement>(
+            this ComponentMappingReference<TComponent> mapping, string name, Expression<Func<TComponent, IQueryable<TElement>>> map)
+        {
+            var parameter = map.Parameters.Single();
+
+            var source = mapping.Instance.Mappings.ToImmutableDictionary(x => x.Key.Split('.').Aggregate((Expression)parameter, (ex, key) => Expression.Property(ex, key)), x => x.Value);
+
+            return mapping.Add(CreateMappingExpression<TElement>(name, map, source));
+        }
+
         public static ComponentMappingReference<TComponent> CreateComponent<TComponent>()
         {
             var constructors = typeof(TComponent).GetConstructors();
@@ -140,26 +157,6 @@ namespace Maze
             return ContainerReference.Empty.Add(CreateComponentMappingFromExpression<TComponent>(map, sourceMappings));
         }
 
-        public static ContainerReference Combine(params ContainerReference[] mappings)
-        {
-            switch (mappings.Length)
-            {
-                case 0:
-                    return ContainerReference.Empty;
-                case 1:
-                    return mappings[0];
-            }
-
-            var result = mappings[0];
-
-            for (int i = 1; i < mappings.Length; i++)
-            {
-                result = result.Add(mappings[i]);
-            }
-
-            return result;
-        }
-
         public static Type GetElementType(this IMapping mapping)
         {
             return mapping.GetType().FindGenericType(typeof(IMapping<>)).GetGenericArguments().Single();
@@ -195,12 +192,7 @@ namespace Maze
 
             var exec = compiler.Build(mapping.Container);
 
-            var subject = new System.Reactive.Subjects.ReplaySubject<TElement>();
-
-            exec.GetStream(mapping.Instance).Subscribe(subject);
-            exec.Release();
-
-            return subject;
+            return ExecutionGraphSubject<TElement>.Create(exec.GetStream(mapping.Instance), exec.Release);
         }
 
         public static IObservable<TElement> Execute<TElement, TSource>(this MappingReference<TElement> mapping, params TSource[] source)
@@ -209,12 +201,7 @@ namespace Maze
 
             var exec = compiler.Build(Combine(Source(source), mapping).Container);
 
-            var subject = new System.Reactive.Subjects.ReplaySubject<TElement>();
-
-            exec.GetStream(mapping.Instance).Subscribe(subject);
-            exec.Release();
-
-            return subject;
+            return ExecutionGraphSubject<TElement>.Create(exec.GetStream(mapping.Instance), exec.Release);
         }
 
         public static MappingReference<TElement> Get<TElement>(this ContainerReference mapping)
@@ -276,10 +263,36 @@ namespace Maze
             return mapping.Add(instance);
         }
 
+        public static ComponentMappingReference<CombinedComponentMapping<IQueryable<TElementFirst>, IQueryable<TElementFirst>>.Component> Combine<TElementFirst, TElementSecond>(
+            this MappingReference<TElementFirst> firstMapping, MappingReference<TElementSecond> secondMapping)
+        {
+            return ContainerReference.Combine(firstMapping, secondMapping);
+        }
+
         public static ComponentMappingReference<CombinedComponentMapping<TComponentFirst, TComponentSecond>.Component> Combine<TComponentFirst, TComponentSecond>(
             this ComponentMappingReference<TComponentFirst> firstMapping, ComponentMappingReference<TComponentSecond> secondMapping)
         {
             return ContainerReference.Combine(firstMapping, secondMapping);
+        }
+
+        public static ContainerReference Combine(params ContainerReference[] mappings)
+        {
+            switch (mappings.Length)
+            {
+                case 0:
+                    return ContainerReference.Empty;
+                case 1:
+                    return mappings[0];
+            }
+
+            var result = mappings[0];
+
+            for (int i = 1; i < mappings.Length; i++)
+            {
+                result = result.Merge(mappings[i]);
+            }
+
+            return result;
         }
 
         private static IMapping<TElement> CreateMappingFromExpression<TElement>(string name, LambdaExpression expression, ImmutableDictionary<ParameterExpression, IMapping> sources)
@@ -324,7 +337,7 @@ namespace Maze
                 var props = body.Members.Select(x => new { x.Name, Type = ((PropertyInfo)x).PropertyType.GetGenericArguments().Single() }).ToList();
 
                 var mappings = body.Arguments
-                    .Select((arg, i) => CreateMapping(null, props[i].Type, Expression.Lambda(arg, expression.Parameters), sources))
+                    .Select((arg, i) => CreateMapping(props[i].Name, props[i].Type, Expression.Lambda(arg, expression.Parameters), sources))
                     .Select((mapping, i) => new KeyValuePair<string, IMapping>(props[i].Name, mapping))
                     .ToImmutableDictionary();
 
@@ -558,6 +571,30 @@ namespace Maze
             public string Name
             {
                 get { return string.Join(".", this.path.Select(x => x.Name)); }
+            }
+        }
+
+        private class ExecutionGraphSubject<TElement> : IObservable<TElement>
+        {
+            private readonly IObservable<TElement> observable;
+            private readonly Func<Task> release;
+
+            public ExecutionGraphSubject(IObservable<TElement> observable, Func<Task> release)
+            {
+                this.observable = observable;
+                this.release = release;
+            }
+
+            public static IObservable<TElement> Create(IObservable<TElement> observable, Func<Task> release)
+            {
+                return new ExecutionGraphSubject<TElement>(observable, release);
+            }
+
+            public IDisposable Subscribe(IObserver<TElement> observer)
+            {
+                var result = this.observable.Subscribe(observer);
+                this.release.Invoke();
+                return result;
             }
         }
     }

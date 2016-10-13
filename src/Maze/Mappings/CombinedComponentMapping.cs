@@ -33,6 +33,16 @@ namespace Maze.Mappings
                 this.mappings = builder.ToImmutable();
             }
 
+            public MergedComponentMappingProxy(IMapping first, IMapping second)
+            {
+                var builder = ImmutableDictionary.CreateBuilder<string, IMapping>();
+
+                builder.Add("First", first);
+                builder.Add("Second", second);
+
+                this.mappings = builder.ToImmutable();
+            }
+
             public ImmutableDictionary<string, IMapping> Mappings
             {
                 get { return this.mappings; }
