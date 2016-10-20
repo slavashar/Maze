@@ -1,0 +1,34 @@
+{
+  "version": "0.3.0-*",
+  "title": "Mapping library - Web",
+  "authors": [ "Viacheslav Sharashkin" ],
+  "copyright": "Copyright (C) 2014 Viacheslav Sharashkin",
+
+  "packOptions": {
+    "projectUrl": "https://github.com/slavashar/Maze",
+    "licenseUrl": "https://raw.githubusercontent.com/slavashar/Maze/master/license.txt",
+    "requireLicenseAcceptance": true
+  },
+
+  "buildOptions": {
+  },
+
+  "dependencies": {
+    "Maze": { "target": "project" },
+    "Microsoft.AspNetCore.Html.Abstractions": "1.0.0"
+  },
+
+  "frameworks": {
+    "net46": {
+      "frameworkAssemblies": {
+        "System.Xml": "4.0.0.0",
+        "System.Xml.Linq": "4.0.0.0",
+        "System.IO": "4.0.0.0"
+      },
+      "dependencies": {
+        "Microsoft.Automatic.Graph.Layout": "1.0.0"
+      }
+    }
+  }
+}
+

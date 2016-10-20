@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace Maze
@@ -9,7 +10,11 @@ namespace Maze
     {
         public static bool IsAnonymousType(this Type type)
         {
+#if NET45
             return type.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Any() && type.Name.Contains("AnonymousType");
+#else
+            return type.GetTypeInfo().GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Any() && type.Name.Contains("AnonymousType");
+#endif
         }
 
         internal static bool IsNumericType(Type type)
@@ -19,41 +24,43 @@ namespace Maze
                 return false;
             }
 
-            switch (Type.GetTypeCode(type))
+            if (type == typeof(byte) ||
+                type == typeof(sbyte) ||
+                type == typeof(decimal) ||
+                type == typeof(float) ||
+                type == typeof(double) ||
+                type == typeof(short) ||
+                type == typeof(ushort) ||
+                type == typeof(int) ||
+                type == typeof(uint) ||
+                type == typeof(long) ||
+                type == typeof(ulong))
             {
-                case TypeCode.Byte:
-                case TypeCode.Decimal:
-                case TypeCode.Double:
-                case TypeCode.Int16:
-                case TypeCode.Int32:
-                case TypeCode.Int64:
-                case TypeCode.SByte:
-                case TypeCode.Single:
-                case TypeCode.UInt16:
-                case TypeCode.UInt32:
-                case TypeCode.UInt64:
-                    return true;
-
-                default:
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
-                    {
-                        return IsNumericType(Nullable.GetUnderlyingType(type));
-                    }
-
-                    return false;
+                return true;
             }
+
+            if (type.EqualsGenericDefinition(typeof(Nullable<>)))
+            {
+                return IsNumericType(Nullable.GetUnderlyingType(type));
+            }
+
+            return false;
         }
 
         internal static Type FindGenericType(this Type type, Type definition)
         {
             while (type != null && type != typeof(object))
             {
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == definition)
+                if (type.EqualsGenericDefinition(definition))
                 {
                     return type;
                 }
 
+#if NET45
                 if (definition.IsInterface)
+#else
+                if (definition.GetTypeInfo().IsInterface)
+#endif
                 {
                     foreach (var interfaceType in type.GetInterfaces())
                     {
@@ -66,7 +73,7 @@ namespace Maze
                     }
                 }
 
-                type = type.BaseType;
+                type = type.GetTypeInfo().BaseType;
             }
 
             return null;
@@ -74,12 +81,39 @@ namespace Maze
 
         internal static TResult InvokeGenericMethod<TResult>(Delegate method, Type typeArg, params object[] args)
         {
-            return (TResult)method.Method.GetGenericMethodDefinition().MakeGenericMethod(typeArg).Invoke(method.Target, args);
+            return (TResult)method.GetGenericMethodDefinition().MakeGenericMethod(typeArg).Invoke(method.Target, args);
         }
 
         internal static TResult CallGenericMethod<T, TResult>(Func<T, TResult> method, T arg, params Type[] typeArgs)
         {
-            return (TResult)method.Method.GetGenericMethodDefinition().MakeGenericMethod(typeArgs).Invoke(method.Target, new object[] { arg });
+            return (TResult)method.GetGenericMethodDefinition().MakeGenericMethod(typeArgs).Invoke(method.Target, new object[] { arg });
+        }
+
+        internal static MethodInfo GetGenericMethodDefinition(this Delegate deleg)
+        {
+#if NET45
+            return deleg.Method.GetGenericMethodDefinition();
+#else
+            return deleg.GetMethodInfo().GetGenericMethodDefinition();
+#endif
+        }
+
+        internal static bool IsGenericType(this Type type)
+        {
+#if NET45
+            return type.IsGenericType;
+#else
+            return type.GetTypeInfo().IsGenericType;
+#endif
+        }
+
+        internal static bool EqualsGenericDefinition(this Type type, Type definition)
+        {
+#if NET45
+            return type.IsGenericType && type.GetGenericTypeDefinition() == definition;
+#else
+            return type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == definition;
+#endif
         }
 
         internal static System.Reflection.MethodInfo GetMethodDefinition(Expression<Func<object>> methodCall)

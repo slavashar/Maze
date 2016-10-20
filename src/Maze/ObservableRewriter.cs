@@ -4,18 +4,10 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Linq;
-using System.Reactive.Subjects;
 using System.Reflection;
 using Maze.Reactive;
-using AbstractTypeEmitter = Castle.DynamicProxy.Generators.Emitters.AbstractTypeEmitter;
-using ArgumentReference = Castle.DynamicProxy.Generators.Emitters.SimpleAST.ArgumentReference;
-using AssignStatement = Castle.DynamicProxy.Generators.Emitters.SimpleAST.AssignStatement;
-using MethodEmitter = Castle.DynamicProxy.Generators.Emitters.MethodEmitter;
-using ModuleScope = Castle.DynamicProxy.ModuleScope;
 using Observable = System.Reactive.Linq.Observable;
 using ObservableMaze = Maze.Reactive.Observable;
-using ReferenceExpression = Castle.DynamicProxy.Generators.Emitters.SimpleAST.ReferenceExpression;
-using ReturnStatement = Castle.DynamicProxy.Generators.Emitters.SimpleAST.ReturnStatement;
 
 namespace Maze
 {
@@ -23,208 +15,208 @@ namespace Maze
     {
         private static readonly IDictionary<MethodInfo, MethodInfo[]> MethodMap = new Dictionary<MethodInfo, MethodInfo[]>
         {
-            [new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, int, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, int, object>, IObservable<object>>(Observable.Select).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, Expression<Func<object, object>>, IQueryable<object>>(Queryable.Select).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, Expression<Func<object, object>>, IQueryable<object>>(Queryable.Select).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, Expression<Func<object, int, object>>, IQueryable<object>>(Queryable.Select).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, Expression<Func<object, int, object>>, IQueryable<object>>(Queryable.Select).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, int, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, int, object>, IObservable<object>>(Observable.Select).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, int, object>, IEnumerable<object>>(Enumerable.Select).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, IObservable<object>>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IEnumerable<object>>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, IObservable<object>>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IEnumerable<object>>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, Expression<Func<object, IEnumerable<object>>>, IQueryable<object>>(Queryable.SelectMany).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, Expression<Func<object, IEnumerable<object>>>, IQueryable<object>>(Queryable.SelectMany).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, IObservable<object>>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IEnumerable<object>>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, IObservable<object>>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IEnumerable<object>>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, Expression<Func<object, IEnumerable<object>>>, Expression<Func<object, object, object>>, IQueryable<object>>(Queryable.SelectMany).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, Expression<Func<object, IEnumerable<object>>>, Expression<Func<object, object, object>>, IQueryable<object>>(Queryable.SelectMany).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IObservable<object>>(Observable.SelectMany).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, IEnumerable<object>>, Func<object, object, object>, IEnumerable<object>>(Enumerable.SelectMany).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, bool>, IObservable<object>>(Observable.Where).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IObservable<bool>>, IObservable<object>>(ObservableMaze.Where).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, bool>, IObservable<object>>(Observable.Where).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IObservable<bool>>, IObservable<object>>(ObservableMaze.Where).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, Expression<Func<object, bool>>, IQueryable<object>>(Queryable.Where).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, Expression<Func<object, bool>>, IQueryable<object>>(Queryable.Where).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, bool>, IObservable<object>>(Observable.Where).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, Func<object, IObservable<bool>>, IObservable<object>>(ObservableMaze.Where).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, bool>, IObservable<object>>(Observable.Where).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, Func<object, IObservable<bool>>, IObservable<object>>(ObservableMaze.Where).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, bool>, IEnumerable<object>>(Enumerable.Where).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.First).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.First).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.FirstAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.First).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.FirstAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.First).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.FirstOrDefault).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.FirstOrDefault).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.FirstOrDefaultAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.FirstOrDefault).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.FirstOrDefaultAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.FirstOrDefault).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.Last).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.Last).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.LastAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.Last).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.LastAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.Last).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.LastOrDefault).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.LastOrDefault).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.LastOrDefaultAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.LastOrDefault).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.LastOrDefaultAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.LastOrDefault).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.Single).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.Single).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.SingleAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.Single).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.SingleAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.Single).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.SingleOrDefault).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.SingleOrDefault).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.SingleOrDefaultAsync).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.SingleOrDefault).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>>(Observable.SingleOrDefaultAsync).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.SingleOrDefault).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, int>(Enumerable.Count).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, int>(Enumerable.Count).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<int>>(Observable.Count).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, int>(Enumerable.Count).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<int>>(Observable.Count).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, int>(Enumerable.Count).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.Max).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.Max).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.Max).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.Max).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>>(Observable.Max).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.Max).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, object>(Enumerable.Min).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object>(Enumerable.Min).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>>(Observable.Min).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object>(Enumerable.Min).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>>(Observable.Min).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object>(Enumerable.Min).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, object, bool>(Enumerable.Contains).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, object, bool>(Enumerable.Contains).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, object, IObservable<bool>>(Observable.Contains).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, object, bool>(Enumerable.Contains).Method.GetGenericMethodDefinition(),
+                new Func<IObservable<object>, object, IObservable<bool>>(Observable.Contains).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, object, bool>(Enumerable.Contains).GetGenericMethodDefinition(),
             },
 
-            [new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, IObservable<object>, Func<object, IObservable<object>>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>, Func<object, IObservable<object>>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, IEnumerable<object>, Expression<Func<object, object>>, Expression<Func<object, object>>, Expression<Func<object, object, object>>, IQueryable<object>>(Queryable.Join).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, IEnumerable<object>, Expression<Func<object, object>>, Expression<Func<object, object>>, Expression<Func<object, object, object>>, IQueryable<object>>(Queryable.Join).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).Method.GetGenericMethodDefinition(),
-                new Func<IObservable<object>, IObservable<object>, Func<object, IObservable<object>>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).GetGenericMethodDefinition(),
+                new Func<IObservable<object>, IObservable<object>, Func<object, IObservable<object>>, Func<object, IObservable<object>>, Func<object, object, object>, IObservable<object>>(ObservableMaze.Join).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, object, object>, IEnumerable<object>>(Enumerable.Join).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, IObservable<object>, object>, IObservable<object>>(ObservableMaze.GroupJoin).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, IObservable<object>, object>, IObservable<object>>(ObservableMaze.GroupJoin).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, IEnumerable<object>, Expression<Func<object, object>>, Expression<Func<object, object>>, Expression<Func<object, IEnumerable<object>, object>>, IQueryable<object>>(Queryable.GroupJoin).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, IEnumerable<object>, Expression<Func<object, object>>, Expression<Func<object, object>>, Expression<Func<object, IEnumerable<object>, object>>, IQueryable<object>>(Queryable.GroupJoin).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, IObservable<object>, object>, IObservable<object>>(ObservableMaze.GroupJoin).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, Func<object, object>, Func<object, object>, Func<object, IObservable<object>, object>, IObservable<object>>(ObservableMaze.GroupJoin).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, Func<object, object>, Func<object, object>, Func<object, IEnumerable<object>, object>, IEnumerable<object>>(Enumerable.GroupJoin).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, Func<object, object>, IEnumerable<IGrouping<object, object>>>(Enumerable.GroupBy).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, Func<object, object>, IEnumerable<IGrouping<object, object>>>(Enumerable.GroupBy).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, Func<object, object>, IObservable<IGroupedObservable<object, object>>>(Observable.GroupBy).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<IGrouping<object, object>>>(Enumerable.GroupBy).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, Func<object, object>, IObservable<IGroupedObservable<object, object>>>(Observable.GroupBy).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, Func<object, object>, IEnumerable<IGrouping<object, object>>>(Enumerable.GroupBy).GetGenericMethodDefinition()
             },
 
-            [new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, IQueryable<object>, IQueryable<object>>(Queryable.Concat).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, IQueryable<object>, IQueryable<object>>(Queryable.Concat).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Concat).GetGenericMethodDefinition()
             },
 
-            [new Func<IQueryable<object>, IQueryable<object>, IQueryable<object>>(Queryable.Union).Method.GetGenericMethodDefinition()] = new[]
+            [new Func<IQueryable<object>, IQueryable<object>, IQueryable<object>>(Queryable.Union).GetGenericMethodDefinition()] = new[]
             {
-                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).Method.GetGenericMethodDefinition(),
-                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Union).Method.GetGenericMethodDefinition()
+                new Func<IObservable<object>, IObservable<object>, IObservable<object>>(Observable.Merge).GetGenericMethodDefinition(),
+                new Func<IEnumerable<object>, IEnumerable<object>, IEnumerable<object>>(Enumerable.Union).GetGenericMethodDefinition()
             },
         };
 
-        private readonly ModuleScope scope;
+        private readonly TypeFactory typeFactory;
 
         private readonly ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap;
         private readonly ImmutableDictionary<MemberInfo, ParameterExpression> memberMap;
 
         public ObservableRewriter()
-            : this(new ModuleScope(), ImmutableDictionary<ParameterExpression, ParameterExpression>.Empty, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty)
+            : this(new TypeFactory(), ImmutableDictionary<ParameterExpression, ParameterExpression>.Empty, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty)
         {
         }
 
         public ObservableRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap)
-            : this(new ModuleScope(), parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty)
+            : this(new TypeFactory(), parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty)
         {
         }
 
-        protected ObservableRewriter(ModuleScope scope, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
+        protected ObservableRewriter(TypeFactory typeFactory, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
         {
-            this.scope = scope;
+            this.typeFactory = typeFactory;
             this.parameterMap = parameterMap;
             this.memberMap = memberMap;
         }
 
-        protected ModuleScope Scope
+        protected TypeFactory TypeFactory
         {
-            get { return this.scope; }
+            get { return this.typeFactory; }
         }
 
         public static ImmutableDictionary<ParameterExpression, ParameterExpression> ChangeParameters(
@@ -254,7 +246,7 @@ namespace Maze
         {
             var mapParams = ChangeParameters(lambda.Parameters);
 
-            var visitor = new ObservableRewriter(new ModuleScope(), mapParams, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty);
+            var visitor = new ObservableRewriter(new TypeFactory(), mapParams, ImmutableDictionary<MemberInfo, ParameterExpression>.Empty);
 
             return (LambdaExpression)visitor.Visit(lambda);
         }
@@ -295,7 +287,7 @@ namespace Maze
                 return newexpr;
             }
 
-            return this.CreateProxy(args, newexpr.Members.Select(x => x.Name).ToList());
+            return this.typeFactory.CreateProxy(args, newexpr.Members.Select(x => x.Name).ToList());
         }
 
         protected override Expression VisitMemberInit(MemberInitExpression init)
@@ -326,7 +318,7 @@ namespace Maze
                 return Expression.MemberInit(init.NewExpression, list.Zip(initBindings, (x, ma) => Expression.Bind(ma.Member, x)));
             }
 
-            return this.CreateProxy(list, initBindings.Select(x => x.Member.Name).ToList());
+            return this.typeFactory.CreateProxy(list, initBindings.Select(x => x.Member.Name).ToList());
         }
 
         protected override Expression VisitParameter(ParameterExpression parameter)
@@ -355,9 +347,17 @@ namespace Maze
                 return Expression.PropertyOrField(expression, node.Member.Name);
             }
 
-            return node.Member.MemberType == MemberTypes.Property
-                    ? Expression.Property(expression, (PropertyInfo)node.Member)
-                    : Expression.Field(expression, (FieldInfo)node.Member);
+            if (node.Member is PropertyInfo)
+            {
+                return Expression.Property(expression, (PropertyInfo)node.Member);
+            }
+
+            if (node.Member is FieldInfo)
+            {
+                return Expression.Field(expression, (FieldInfo)node.Member);
+            }
+
+            throw new InvalidOperationException("Unknown member type: " + node.Member.GetType().Name);
         }
 
         protected override Expression VisitMethodCall(MethodCallExpression methodCall)
@@ -366,7 +366,7 @@ namespace Maze
             {
                 return base.VisitMethodCall(methodCall);
             }
-
+            
             var genericOriginalMethod = methodCall.Method.GetGenericMethodDefinition();
             var genericOriginalArgs = genericOriginalMethod.GetGenericArguments();
             var genericOriginalParams = genericOriginalMethod.GetParameters();
@@ -416,17 +416,17 @@ namespace Maze
                     continue;
                 }
 
-                if (genericArgumentType.IsGenericType && genericArgumentType.GetGenericTypeDefinition() == typeof(Expression<>))
+                if (genericArgumentType.EqualsGenericDefinition(typeof(Expression<>)))
                 {
                     genericArgumentType = genericArgumentType.GetGenericArguments().Single();
                 }
 
                 // the parameter is projection like Func<T, TResult>
-                if (genericArgumentType.IsGenericType &&
-                    (genericArgumentType.GetGenericTypeDefinition() == typeof(Func<,>) ||
-                     genericArgumentType.GetGenericTypeDefinition() == typeof(Func<,,>) ||
-                     genericArgumentType.GetGenericTypeDefinition() == typeof(Func<,,,>) ||
-                     genericArgumentType.GetGenericTypeDefinition() == typeof(Func<,,,,>)))
+                if (genericArgumentType.EqualsGenericDefinition(typeof(Func<,>)) ||
+                    genericArgumentType.EqualsGenericDefinition(typeof(Func<,,>)) ||
+                    genericArgumentType.EqualsGenericDefinition(typeof(Func<,,,>)) ||
+                    genericArgumentType.EqualsGenericDefinition(typeof(Func<,,,,>)) ||
+                    genericArgumentType.EqualsGenericDefinition(typeof(Func<,,,,,>)))
                 {
                     var lambda = methodCall.Arguments[index].NodeType == ExpressionType.Quote
                         ? (LambdaExpression)((UnaryExpression)methodCall.Arguments[index]).Operand
@@ -490,46 +490,9 @@ namespace Maze
             return Expression.Call(method, exprArgs);
         }
 
-        protected NewExpression CreateProxy(IReadOnlyCollection<Expression> arguments, IReadOnlyList<string> members)
-        {
-            var emiter = new Castle.DynamicProxy.Generators.Emitters.ClassEmitter(
-                this.scope, "DynamicProxy_1", typeof(DynamicProxy), Enumerable.Empty<Type>());
-
-            var fields = arguments.Select((a, i) =>
-                emiter.CreateField("__" + members[i], a.Type, FieldAttributes.Public | FieldAttributes.InitOnly)).ToArray();
-
-            var args = fields.Select(field => new ArgumentReference(field.Reference.FieldType)).ToArray();
-
-            var constructor = emiter.CreateConstructor(args);
-
-            for (var i = 0; i < fields.Length; i++)
-            {
-                constructor.CodeBuilder.AddStatement(new AssignStatement(fields[i], args[i].ToExpression()));
-
-                var property = emiter.CreateProperty(members[i], PropertyAttributes.None, fields[i].Reference.FieldType, Type.EmptyTypes);
-
-                // TODO: get rid of the reflection
-                var methodEmitterCnst = typeof(MethodEmitter).GetConstructor(
-                    BindingFlags.NonPublic | BindingFlags.Instance,
-                    null,
-                    new Type[] { typeof(AbstractTypeEmitter), typeof(string), typeof(MethodAttributes), typeof(Type), typeof(Type[]) },
-                    null);
-
-                var getter = (MethodEmitter)methodEmitterCnst.Invoke(new object[] { emiter, "get_" + members[i], MethodAttributes.Public, fields[i].Reference.FieldType, Type.EmptyTypes });
-
-                getter.CodeBuilder.AddStatement(new ReturnStatement(new ReferenceExpression(fields[i])));
-
-                property.GetType().GetField("getMethod", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(property, getter);
-            }
-
-            var type = emiter.BuildType();
-
-            return Expression.New(type.GetConstructors().Single(), arguments, members.Select(name => type.GetProperty(name)));
-        }
-
         protected virtual ObservableRewriter CreateNestedRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
         {
-            return new ObservableRewriter(this.scope, parameterMap, memberMap);
+            return new ObservableRewriter(this.typeFactory, parameterMap, memberMap);
         }
 
         private static ParameterExpression VisitLambdaParameter(ParameterExpression parameter)
@@ -546,7 +509,7 @@ namespace Maze
 
         private static Type VisitType(Type type)
         {
-            if (type.IsGenericType)
+            if (type.IsGenericType())
             {
                 var args = type.GetGenericArguments().Select(VisitType);
 
@@ -566,7 +529,7 @@ namespace Maze
 
         private static bool IsEnumerableType(Type type)
         {
-            return type.IsGenericType && (type.GetGenericTypeDefinition() == typeof(IEnumerable<>) || type.GetGenericTypeDefinition() == typeof(IQueryable<>));
+            return type.IsGenericType() && (type.GetGenericTypeDefinition() == typeof(IEnumerable<>) || type.GetGenericTypeDefinition() == typeof(IQueryable<>));
         }
 
         private static Expression VisitUnderlyingLambda(ObservableRewriter current, ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap, ImmutableArray<Type> parameterTypes, LambdaExpression lambda)
@@ -675,7 +638,7 @@ namespace Maze
 
             if (observableParameters.Count == 1)
             {
-                var select = new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).Method.GetGenericMethodDefinition();
+                var select = new Func<IObservable<object>, Func<object, object>, IObservable<object>>(Observable.Select).GetGenericMethodDefinition();
 
                 var tp = observableParameters.Single();
 
@@ -711,11 +674,11 @@ namespace Maze
         }
 
         protected MetricObservableRewriter(
-            ModuleScope scope,
+            TypeFactory typeFactory,
             ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap,
             ImmutableDictionary<MemberInfo, ParameterExpression> memberMap,
             Dictionary<Expression, ObservableTracker> trackers)
-            : base (scope, parameterMap, memberMap)
+            : base (typeFactory, parameterMap, memberMap)
         {
             this.trackers = trackers;
         }
@@ -737,7 +700,7 @@ namespace Maze
 
         protected override ObservableRewriter CreateNestedRewriter(ImmutableDictionary<ParameterExpression, ParameterExpression> parameterMap, ImmutableDictionary<MemberInfo, ParameterExpression> memberMap)
         {
-            return new MetricObservableRewriter(this.Scope, parameterMap, memberMap, this.trackers);
+            return new MetricObservableRewriter(this.TypeFactory, parameterMap, memberMap, this.trackers);
         }
 
         private Expression Attach(Expression key, Expression expression)

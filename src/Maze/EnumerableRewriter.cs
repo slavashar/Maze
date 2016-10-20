@@ -41,7 +41,7 @@ namespace Maze
             {
                 var param = node.Parameters[i];
 
-                if (param.Type.IsGenericType && param.Type.GetGenericTypeDefinition() == typeof(IQueryable<>))
+                if (param.Type.EqualsGenericDefinition(typeof(IQueryable<>)))
                 {
                     var newParam = Expression.Parameter(typeof(IEnumerable<>).MakeGenericType(param.Type.GetGenericArguments()), param.Name);
                     newReplaced = newReplaced.Add(param, newParam);

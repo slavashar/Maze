@@ -14,12 +14,8 @@ namespace Maze.Linq
         private static readonly string IfElseMethodName = ((MethodCallExpression)((Expression<Func<Operator.IIfThen<object>, dynamic>>)(x => x.Else(null))).Body).Method.Name;
         private static readonly string IfElseIfMethodName = ((MethodCallExpression)((Expression<Func<Operator.IIfThen<object>, dynamic>>)(x => x.ElseIf(true, null))).Body).Method.Name;
 
-        private static readonly string ExpressionMethodName = new Func<Expression<Func<object, object>>, object, object>(Operator.Expression).Method.Name;
-
-        static OperatorVisitor()
-        {
-        }
-
+        private static readonly string ExpressionMethodName = new Func<Expression<Func<object, object>>, object, object>(Operator.Expression).GetGenericMethodDefinition().Name;
+        
         public Expression<Func<TResult>> Visit<TResult>(Expression<Func<TResult>> expression)
         {
             return (Expression<Func<TResult>>)base.Visit(expression);
@@ -48,8 +44,7 @@ namespace Maze.Linq
                 }
             }
 
-            if (node.Method.DeclaringType.IsGenericType &&
-                node.Method.DeclaringType.GetGenericTypeDefinition() == typeof(Operator.ISwitch<,>) &&
+            if (node.Method.DeclaringType.EqualsGenericDefinition(typeof(Operator.ISwitch<,>)) &&
                 node.Method.Name == SwitchDefaultMethodName)
             {
                 var parent = node.Object as MethodCallExpression;
@@ -64,7 +59,7 @@ namespace Maze.Linq
 
                     var values = Expression.Lambda(parent.Arguments[0]).Compile().DynamicInvoke();
 
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                    if (type.EqualsGenericDefinition(typeof(IEnumerable<>)))
                     {
                         testValues = ((IEnumerable)values).Cast<object>().Select(x => Expression.Constant(x));
                     }
@@ -83,8 +78,7 @@ namespace Maze.Linq
                 return Expression.Switch(this.Visit(parent.Arguments[0]), this.Visit(node.Arguments[0]), cases.ToArray());
             }
 
-            if (node.Method.DeclaringType.IsGenericType &&
-                node.Method.DeclaringType.GetGenericTypeDefinition() == typeof(Operator.IIfThen<>) &&
+            if (node.Method.DeclaringType.EqualsGenericDefinition(typeof(Operator.IIfThen<>)) &&
                 node.Method.Name == IfElseMethodName)
             {
                 var testNode = node.Object as MethodCallExpression;

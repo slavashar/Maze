@@ -17,7 +17,7 @@ namespace Maze
 
         private static readonly Lazy<IDictionary<ExpressionType, IImplComparer>> ConcreteExpressionComparers;
 
-        private static readonly StringComparer DefaultStringComparer = StringComparer.InvariantCulture;
+        private static readonly StringComparer DefaultStringComparer = StringComparer.Ordinal;
 
         private readonly ExpressionComparerImpl defaultImpl = new ExpressionComparerImpl();
 

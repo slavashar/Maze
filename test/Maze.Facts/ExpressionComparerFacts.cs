@@ -18,9 +18,9 @@ namespace Maze.Facts
         {
             ExpressionComparer.Default.Compare(Expression.Parameter(typeof(string), "str"), Expression.Parameter(typeof(string), "str")).ShouldEqual(0);
 
-            ExpressionComparer.Default.Compare(Expression.Parameter(typeof(string), "str"), Expression.Parameter(typeof(string), "value")).ShouldEqual(-1);
+            (ExpressionComparer.Default.Compare(Expression.Parameter(typeof(string), "str"), Expression.Parameter(typeof(string), "value")) < 0).ShouldBeTrue();
 
-            ExpressionComparer.Default.Compare(Expression.Parameter(typeof(string), "str"), Expression.Parameter(typeof(int), "str")).ShouldEqual(1);
+            (ExpressionComparer.Default.Compare(Expression.Parameter(typeof(string), "str"), Expression.Parameter(typeof(int), "str")) > 0).ShouldBeTrue();
         }
 
         [Fact]

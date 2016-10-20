@@ -243,7 +243,7 @@ namespace Maze.Nodes
                 {
                     while (afected.Contains(node))
                     {
-                        node = visit((TNode)(dynamic)node);
+                        node = visit((TNode)(object)node);
 
                         if (node == null)
                         {

@@ -182,7 +182,7 @@ namespace Maze.Facts
             }
             else if (expected != actual)
             {
-                if (expected == typeof(object) && typeof(DynamicProxy).IsAssignableFrom(actual))
+                if (expected == typeof(object) && typeof(TypeFactory.DynamicProxy).IsAssignableFrom(actual))
                 {
                     return;
                 }

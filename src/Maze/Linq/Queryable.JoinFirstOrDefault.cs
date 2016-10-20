@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -7,7 +8,7 @@ namespace Maze.Linq
 {
     public static partial class Queryable
     {
-        public static IQueryable<TResult> JoinFirstOrDefault<TOuter, TInner, TKey, TResult>(this IQueryable<TOuter> outer, IQueryable<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector, Expression<Func<TOuter, TInner, TResult>> resultSelector)
+        public static IQueryable<TResult> JoinFirstOrDefault<TOuter, TInner, TKey, TResult>(this IQueryable<TOuter> outer, IEnumerable<TInner> inner, Expression<Func<TOuter, TKey>> outerKeySelector, Expression<Func<TInner, TKey>> innerKeySelector, Expression<Func<TOuter, TInner, TResult>> resultSelector)
         {
             if (outer == null)
             {
@@ -35,10 +36,33 @@ namespace Maze.Linq
             }
 
             return outer.Provider.CreateQuery<TResult>(
-                System.Linq.Expressions.Expression.Call(
+                Expression.Call(
                     null,
-                    ((MethodInfo)MethodBase.GetCurrentMethod()).MakeGenericMethod(typeof(TOuter), typeof(TInner), typeof(TKey), typeof(TResult)),
-                    new Expression[] { outer.Expression, inner.Expression, System.Linq.Expressions.Expression.Quote(outerKeySelector), System.Linq.Expressions.Expression.Quote(innerKeySelector), System.Linq.Expressions.Expression.Quote(resultSelector) }));
+                    GetMethodInfoOf(() => Queryable.JoinFirstOrDefault(
+                        default(IQueryable<TOuter>),
+                        default(IEnumerable<TInner>),
+                        default(Expression<Func<TOuter, TKey>>),
+                        default(Expression<Func<TInner, TKey>>),
+                        default(Expression<Func<TOuter, TInner, TResult>>))),
+                    new Expression[] {
+                        outer.Expression,
+                        GetSourceExpression(inner),
+                        Expression.Quote(outerKeySelector),
+                        Expression.Quote(innerKeySelector),
+                        Expression.Quote(resultSelector)
+                    }
+                ));
+        }
+
+        private static MethodInfo GetMethodInfoOf<T>(Expression<Func<T>> expression)
+        {
+            return ((MethodCallExpression)expression.Body).Method;
+        }
+
+        private static Expression GetSourceExpression<TSource>(IEnumerable<TSource> source)
+        {
+            var q = source as IQueryable<TSource>;
+            return q != null ? q.Expression : Expression.Constant(source, typeof(IEnumerable<TSource>));
         }
     }
 }

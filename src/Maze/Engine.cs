@@ -469,7 +469,11 @@ namespace Maze
                         find.GetGenericArguments().Single(),
                         (IQueryable)prop.GetValue(component));
                 }
+#if NET45
                 else if (prop.PropertyType.IsClass)
+#else
+                else if (prop.PropertyType.GetTypeInfo().IsClass)
+#endif
                 {
                     foreach (var item in GetComponentQueries(path.Add(prop), prop.GetValue(component), prop.PropertyType))
                     {
