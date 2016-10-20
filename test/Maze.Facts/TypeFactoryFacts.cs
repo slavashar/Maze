@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading.Tasks;
+using System.Reflection;
 using Xunit;
 
 namespace Maze.Facts
@@ -20,8 +20,13 @@ namespace Maze.Facts
                 ["Text"] = typeof(string)
             });
 
+#if NET46
             type.GetProperties().Single().Name.ShouldEqual("Text");
             type.GetProperties().Single().PropertyType.ShouldEqual(typeof(string));
+#else
+            type.GetTypeInfo().GetProperties().Single().Name.ShouldEqual("Text");
+            type.GetTypeInfo().GetProperties().Single().PropertyType.ShouldEqual(typeof(string));
+#endif
         }
 
         [Fact]

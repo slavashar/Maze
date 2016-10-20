@@ -1,0 +1,30 @@
+{
+    "version": "0.1.0",
+    "command": "dotnet",
+    "isShellCommand": true,
+    "args": [],
+    "tasks": [
+        {
+            "taskName": "restore",
+            "args": []
+        },
+
+        {
+            "taskName": "build",
+            "args": [
+                "src/Maze", "test/Maze.Facts"
+            ],
+            "isBuildCommand": true,
+            "problemMatcher": "$msCompile"
+        },
+
+        {
+            "taskName": "test",
+            "args": [
+                "test/Maze.Facts"
+            ],
+            "isTestCommand": true,
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

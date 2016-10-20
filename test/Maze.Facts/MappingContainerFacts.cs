@@ -151,7 +151,7 @@ namespace Maze.Facts
 
             var ex = Assert.Throws<InvalidOperationException>(() => container.Add(anonymousMapping.Object));
 
-            ex.Message.ShouldContain("ambiguous source mapping", StringComparison.InvariantCultureIgnoreCase);
+            ex.Message.ShouldContain("ambiguous source mapping", StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

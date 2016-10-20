@@ -152,14 +152,22 @@ namespace Maze.Facts
                 return;
             }
 
+#if NET46
             if (expected.IsGenericType || actual.IsGenericType)
+#else
+            if (expected.GetTypeInfo().IsGenericType || actual.GetTypeInfo().IsGenericType)
+#endif
             {
                 if (expected.IsAssignableFrom(actual))
                 {
                     return;
                 }
 
-                if(!expected.IsGenericType || !actual.IsGenericType)
+#if NET46
+                if (!expected.IsGenericType || !actual.IsGenericType)
+#else
+                if (!expected.GetTypeInfo().IsGenericType || !actual.GetTypeInfo().IsGenericType)
+#endif
                 {
                     throw new Exception();
                 }
@@ -456,9 +464,15 @@ namespace Maze.Facts
 
         private static bool IsAnonymous(this Type type)
         {
+#if NET46
             return Attribute.IsDefined(type, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)
                 && type.Name.StartsWith("<>") && type.Name.Contains("AnonymousType")
                 && (type.Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+#else
+            return type.GetTypeInfo().IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)
+                && type.Name.StartsWith("<>") && type.Name.Contains("AnonymousType")
+                && (type.GetTypeInfo().Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic;
+#endif
         }
     }
 }

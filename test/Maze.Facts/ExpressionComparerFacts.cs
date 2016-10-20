@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using Xunit;
 
 namespace Maze.Facts
@@ -50,7 +51,11 @@ namespace Maze.Facts
         {
             var param = Expression.Parameter(typeof(IQueryable<int>), "src");
 
+#if NET46
             var method = new Func<IQueryable<int>, double>(Queryable.Average).Method;
+#else
+            var method = new Func<IQueryable<int>, double>(Queryable.Average).GetMethodInfo();
+#endif
 
             var lambda = Expression.Lambda(Expression.Call(method, param), param);
 
