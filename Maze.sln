@@ -1,17 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.25920.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{415B205A-3E86-42EA-9457-80D35379C11D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{1F09F663-5AC3-4F2F-B949-1A3A1789C46A}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Maze", "src\Maze\Maze.xproj", "{D0352DEF-F1FC-447A-A52E-5FBED901AA42}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maze", "src\Maze\Maze.csproj", "{D0352DEF-F1FC-447A-A52E-5FBED901AA42}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Maze.Facts", "test\Maze.Facts\Maze.Facts.xproj", "{E466FB38-0F3D-4D93-96E5-3508AFBC894F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maze.Facts", "test\Maze.Facts\Maze.Facts.csproj", "{E466FB38-0F3D-4D93-96E5-3508AFBC894F}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "Maze.UX.Web", "src\Maze.UX.Web\Maze.UX.Web.xproj", "{73B3A275-879D-4D9C-A330-B5CC3F5C421E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maze.UX.Web", "src\Maze.UX.Web\Maze.UX.Web.csproj", "{73B3A275-879D-4D9C-A330-B5CC3F5C421E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{C1AE716A-5C41-45B9-8D7D-2C53B202AEB1}"
 EndProject
@@ -25,12 +25,12 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Debug|Any CPU.Build.0 = Release|Any CPU
 		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0352DEF-F1FC-447A-A52E-5FBED901AA42}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Debug|Any CPU.Build.0 = Release|Any CPU
 		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E466FB38-0F3D-4D93-96E5-3508AFBC894F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{73B3A275-879D-4D9C-A330-B5CC3F5C421E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -45,6 +45,8 @@ Global
 		{96D74C1B-4CF0-4813-9087-FD355DB0F217}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96D74C1B-4CF0-4813-9087-FD355DB0F217}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{96D74C1B-4CF0-4813-9087-FD355DB0F217}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73B3A275-879D-4D9C-A330-B5CC3F5C421E}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{73B3A275-879D-4D9C-A330-B5CC3F5C421E}.Release|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
