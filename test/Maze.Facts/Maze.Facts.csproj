@@ -1,6 +1,6 @@
 ﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
-  
+
   <PropertyGroup>
     <Copyright>Copyright (C) 2014 Viacheslav Sharashkin</Copyright>
     <AssemblyTitle>Mapping library - Tests</AssemblyTitle>
@@ -32,7 +32,7 @@
       <Version>15.0.0-preview-20161024-02</Version>
     </PackageReference>
     <PackageReference Include="xunit.runner.visualstudio">
-      <Version>2.2.0-beta4-build1188</Version>
+      <Version>2.2.0-beta4-build1194</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Reactive.Testing">
       <Version>3.0.0</Version>
@@ -41,7 +41,7 @@
       <Version>4.6.38-alpha</Version>
     </PackageReference>
     <PackageReference Include="xunit">
-      <Version>2.2.0-beta3-build3402</Version>
+      <Version>2.2.0-beta4-build3444</Version>
     </PackageReference>
     <PackageReference Include="dotnet-test-xunit">
       <Version>2.2.0-preview2-build1029</Version>
@@ -65,6 +65,6 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
   </PropertyGroup>
-  
+
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
