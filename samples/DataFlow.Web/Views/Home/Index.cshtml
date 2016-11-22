@@ -1,0 +1,31 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+@section scripts
+{
+    <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
+}
+
+<div class="container body-content">
+
+    <h3>Simple execution</h3>
+
+    <pre class="prettyprint lang-cs">
+Engine.Source("Data source", Enumerable.Range(0, 100000))
+      .Map(source => 
+           from x in source
+           where x % 1000 == 0
+           select "Number: " + x);</pre>
+
+    <p>The code above can be represented as tree</p>
+
+    <svg-graph node="@MappingConfig.Example1().ExtractGraph()" />
+
+    @using (Html.BeginForm("StartExample1", "Run"))
+    {
+        <button type="submit" class="btn btn-primary">Execute</button>
+    }
+
+    <h3>Having multiple sources</h3>
+</div>
