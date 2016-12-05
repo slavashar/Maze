@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DataFlow.Cmd": {
+      "commandName": "Project",
+      "commandLineArgs": "simple"
+    }
+  }
+}

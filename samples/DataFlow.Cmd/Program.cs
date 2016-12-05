@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using CommandLine;
 
 namespace DataFlow.Cmd
 {
@@ -9,7 +6,11 @@ namespace DataFlow.Cmd
     {
         public static void Main(string[] args)
         {
-            SimpleExecution.Run();
+            var options = Parser.Default.ParseArguments<
+                SimpleOption, 
+                MultipleSourcesOptions>(args);
+
+            ((options as Parsed<object>).Value as IExample)?.Execute();
         }
     }
 }
