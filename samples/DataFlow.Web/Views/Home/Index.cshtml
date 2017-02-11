@@ -1,8 +1,4 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
-}
-
-@section scripts
+﻿@section scripts
 {
     <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
 }
@@ -20,9 +16,9 @@ Engine.Source("Data source", Enumerable.Range(0, 100000))
 
     <p>The code above can be represented as tree</p>
 
-    <svg-graph node="@MappingConfig.Example1().ExtractGraph()" />
+    <svg-graph node="@SimpleMap.Example().ExtractGraph()" />
 
-    @using (Html.BeginForm("StartExample1", "Run"))
+    @using (Html.BeginForm("StartSimpleMap", "Run"))
     {
         <button type="submit" class="btn btn-primary">Execute</button>
     }

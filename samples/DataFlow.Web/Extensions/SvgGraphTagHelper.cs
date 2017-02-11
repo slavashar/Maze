@@ -20,7 +20,7 @@ namespace DataFlow.Web.Extensions
             var grContext = new GraphContext();
 
             var graph = new GeometryGraphBuilder(grContext).Build(this.Node.ToGraph());
-            
+
             output.TagName = "div";
             output.Attributes.Add("class", "maze-graph-container");
             output.Content.SetHtmlContent(new SvgGraphXRenderer(graph, grContext));

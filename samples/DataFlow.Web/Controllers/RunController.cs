@@ -1,14 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DataFlow.Web.Extensions;
+using Microsoft.AspNetCore.Mvc;
 using DataFlow.Web.Models;
 using Maze;
-using Maze.Mappings;
-using Maze.Nodes;
-using Microsoft.AspNetCore.Mvc;
+using DataFlow.Web.Extensions;
 
 namespace DataFlow.Web.Controllers
 {
@@ -17,9 +15,9 @@ namespace DataFlow.Web.Controllers
         public static ConcurrentDictionary<Guid, Execution> Executions = new ConcurrentDictionary<Guid, Execution>();
 
         [HttpPost]
-        public IActionResult StartExample1()
+        public IActionResult StartSimpleMap()
         {
-            var mapping = MappingConfig.Example1();
+            var mapping = SimpleMap.Example();
 
             var graph = mapping.ExtractGraph();
 

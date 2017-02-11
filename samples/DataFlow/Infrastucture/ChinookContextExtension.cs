@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
-namespace DataFlow
+namespace DataFlow.Infrastucture
 {
     public static class ChinookContextExtension
     {
@@ -36,8 +36,7 @@ namespace DataFlow
 
             while (reader.MoveToContent() == XmlNodeType.Element)
             {
-                ElementReader parser;
-                if (!parsers.TryGetValue(reader.Name, out parser))
+                if (!parsers.TryGetValue(reader.Name, out ElementReader parser))
                 {
                     parsers.Add(reader.Name, parser = ElementReader.Create(context, reader.Name));
                 }
@@ -52,9 +51,15 @@ namespace DataFlow
         {
             public static ElementReader Create(DbContext context, string name)
             {
+#if NET451
                 var property = context.GetType().GetProperty(name);
 
                 var element = property.PropertyType.GetGenericArguments().Single();
+#else
+                var property = context.GetType().GetRuntimeProperty(name);
+
+                var element = property.PropertyType.GetType().GenericTypeArguments.Single();
+#endif
 
                 return (ElementReader)Activator.CreateInstance(
                     typeof(ElementReader<>).MakeGenericType(element),
@@ -119,8 +124,11 @@ namespace DataFlow
                 this.set = set;
 
                 var reader = Expression.Parameter(typeof(XmlReader), "reader");
-
+#if NET451
                 var bindings = typeof(T).GetProperties()
+#else
+                var bindings = typeof(T).GetType().GetRuntimeProperties()
+#endif
                     .OrderBy(x => x.MetadataToken).Select(x => Expression.Bind(x, GetExpression(reader, x.PropertyType, x.Name)));
 
                 var lambda = Expression.Lambda<Func<XmlReader, T>>(Expression.MemberInit(Expression.New(typeof(T)), bindings), reader);
