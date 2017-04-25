@@ -4,16 +4,16 @@ using Maze.Mappings;
 
 namespace DataFlow
 {
-    public static class SimpleMap
+    public static class SimpleTransform
     {
         public static MappingReference<string> Example()
         {
             return Engine
-                .Source("Data source", Enumerable.Range(0, 100000))
-                .CreateSimpleMapping();
+                .Source("Input Data", Enumerable.Range(0, 100000))
+                .CreateSimpleTransformation();
         }
 
-        public static MappingReference<string> CreateSimpleMapping(
+        public static MappingReference<string> CreateSimpleTransformation(
             this MappingReference<int> sourceMapping)
         {
             return sourceMapping

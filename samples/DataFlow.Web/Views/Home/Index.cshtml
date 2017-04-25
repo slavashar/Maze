@@ -5,23 +5,25 @@
 
 <div class="container body-content">
 
-    <h3>Simple execution</h3>
+    <h3>Simple transformation</h3>
 
     <pre class="prettyprint lang-cs">
-Engine.Source("Data source", Enumerable.Range(0, 100000))
+Engine.Source("Input Data", Enumerable.Range(0, 100000))
       .Map(source => 
            from x in source
            where x % 1000 == 0
            select "Number: " + x);</pre>
+    
+    <svg-graph node="@SimpleTransform.Example().ExtractGraph()" />
 
-    <p>The code above can be represented as tree</p>
-
-    <svg-graph node="@SimpleMap.Example().ExtractGraph()" />
-
-    @using (Html.BeginForm("StartSimpleMap", "Run"))
+    @using (Html.BeginForm("StartSimpleTransform", "Run"))
     {
         <button type="submit" class="btn btn-primary">Execute</button>
     }
 
-    <h3>Having multiple sources</h3>
+    <h3>
+        Having multiple sources
+    </h3>
+
+    <svg-graph node="@MultipleSourcesTransform.Example().ExtractGraph()" />
 </div>

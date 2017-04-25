@@ -15,7 +15,7 @@ namespace DataFlow.Web.Models
 
         public ExecutionGraph Engine { get; set; }
 
-        public Node Graph { get; set; }
+        public Graph<Node> Graph { get; set; }
     }
 
     public class ExecutionBlock

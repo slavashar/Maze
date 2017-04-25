@@ -9,7 +9,7 @@ namespace DataFlow.Cmd
     {
         public void Execute()
         {
-            var execution = SimpleMap.Example()
+            var execution = SimpleTransform.Example()
                 .Build();
 
             execution.Subscribe(Console.WriteLine);

@@ -1,9 +1,9 @@
-﻿using CommandLine;
-using DataFlow.Infrastucture;
-using Maze;
-using System;
+﻿using System;
 using System.Linq;
 using System.Reactive.Linq;
+using CommandLine;
+using DataFlow.Data;
+using Maze;
 
 namespace DataFlow.Cmd
 {
@@ -14,11 +14,11 @@ namespace DataFlow.Cmd
         {
         }
 
-        public void Execute(ChinookContext context)
+        public void Execute(IChinookSource sources)
         {
-            var sourceAlbum = Engine.Source("Album source", context.Album);
-            var sourceArtist = Engine.Source("Artist source", context.Artist);
-            var sourceTraks = Engine.Source("Track source", context.Track);
+            var sourceAlbum = Engine.Source("Album source", sources.Album);
+            var sourceArtist = Engine.Source("Artist source", sources.Artist);
+            var sourceTraks = Engine.Source("Track source", sources.Track);
 
             var albumName = Engine.Map(
                 (IQueryable<Album> albums, IQueryable<Artist> artists) =>

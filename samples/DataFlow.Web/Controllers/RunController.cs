@@ -17,7 +17,7 @@ namespace DataFlow.Web.Controllers
         [HttpPost]
         public IActionResult StartSimpleMap()
         {
-            var mapping = SimpleMap.Example();
+            var mapping = SimpleTransform.Example();
 
             var graph = mapping.ExtractGraph();
 
