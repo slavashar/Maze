@@ -22,7 +22,7 @@ namespace Xunit
         {
             if (expected.Count != actual.Count)
             {
-                throw new CollectionException(expected.Count, actual.Count);
+                throw new CollectionException(actual, expected.Count, actual.Count);
             }
 
             var index = -1;
@@ -42,7 +42,7 @@ namespace Xunit
                 }
                 catch (Exception ex)
                 {
-                    throw new CollectionException(expected.Count, actual.Count, index, ex);
+                    throw new CollectionException(actual, expected.Count, actual.Count, index, ex);
                 }
             }
         }
@@ -56,7 +56,7 @@ namespace Xunit
         {
             if (expected.Length != actual.Count)
             {
-                throw new CollectionException(expected.Length, actual.Count);
+                throw new CollectionException(actual, expected.Length, actual.Count);
             }
 
             var index = -1;

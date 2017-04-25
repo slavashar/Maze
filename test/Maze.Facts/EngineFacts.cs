@@ -20,6 +20,17 @@ namespace Maze.Facts
             result.Value.ShouldEqual(20);
         }
 
+        [Fact(Skip = "The interface is not ready yet")]
+        public async void execute_a_simple_element_mapping()
+        {
+            var engine = Engine
+                .MapElement((IQueryable<Source> src) => src.Count() + 10);
+
+            var result = await engine.Execute(new Source(), new Source());
+
+            result.ShouldEqual(12);
+        }
+
         [Fact]
         public async Task execute_a_source_mapping()
         {

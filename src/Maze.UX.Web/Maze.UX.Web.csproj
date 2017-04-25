@@ -9,10 +9,10 @@
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Html.Abstractions" Version="1.1.0" />
-    <PackageReference Include="Microsoft.Automatic.Graph.Layout" Version="1.0.0" />
+    <ProjectReference Include="..\Maze\Maze.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Maze\Maze.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Html.Abstractions" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Automatic.Graph.Layout" Version="1.0.0" />
   </ItemGroup>
 </Project>

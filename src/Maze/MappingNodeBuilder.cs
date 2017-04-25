@@ -7,7 +7,7 @@ namespace Maze
 {
     public class MappingNodeBuilder
     {
-        public Node CreateContainerNode(MappingContainer container)
+        public Node Build(MappingContainer container)
         {
             var dictionary = ImmutableDictionary<IMapping, Node>.Empty;
 
@@ -15,7 +15,7 @@ namespace Maze
 
             foreach (var mapping in container.ExecutionQueue)
             {
-                node = this.CreateMappingNode(mapping, container, dictionary);
+                node = this.CreateMappingNode(mapping, dictionary);
 
                 dictionary = dictionary.Add(mapping, node);
             }
@@ -23,7 +23,7 @@ namespace Maze
             return node;
         }
 
-        private Node CreateMappingNode(IMapping mapping, MappingContainer container, ImmutableDictionary<IMapping, Node> dictionary)
+        private Node CreateMappingNode(IMapping mapping, ImmutableDictionary<IMapping, Node> dictionary)
         {
             var parents = mapping.SourceMappings.Values.Select(x => dictionary[x]).ToList();
 

@@ -11,6 +11,11 @@ namespace Maze
 {
     public static class Engine
     {
+        public static MappingReference<TElement> Source<TElement>(params TElement[] items)
+        {
+            return Source<TElement>(null, items);
+        }
+
         public static MappingReference<TElement> Source<TElement>(IEnumerable<TElement> items)
         {
             return Source<TElement>(null, items);
@@ -19,6 +24,11 @@ namespace Maze
         public static MappingReference<TElement> Source<TElement>(string name, IEnumerable<TElement> items)
         {
             return ContainerReference.Empty.Add(new EnumerableMapping<TElement>(name, items));
+        }
+
+        public static MappingReference<TElement> MapElement<TSource, TElement>(Expression<Func<IQueryable<TSource>, TElement>> map)
+        {
+            throw new NotImplementedException();
         }
 
         public static MappingReference<TElement> Map<TSource, TElement>(Expression<Func<IQueryable<TSource>, IQueryable<TElement>>> map)
@@ -143,6 +153,34 @@ namespace Maze
             var instance = CreateMappingFromMappingContext(context, (TComponent)constructors[0].Invoke(args), sourceMappings);
 
             return ContainerReference.Empty.Add(instance);
+        }
+
+        public static ComponentMappingReference<TComponent> CreateComponent<TComponent>(this ContainerReference container)
+        {
+            var constructors = typeof(TComponent).GetConstructors();
+
+            if (constructors.Length == 0)
+            {
+                throw new InvalidOperationException("No public constructor found");
+            }
+            else if (constructors.Length > 1)
+            {
+                throw new InvalidOperationException("Only one contractor expected");
+            }
+
+            var context = new MappingContext();
+
+            var args = constructors[0].GetParameters()
+                .Select(x => TypeExt.CallGenericMethod(context.CreateSource<object>, x.Name, x.ParameterType.GetGenericArguments().Single()))
+                .ToArray();
+
+            var sourceMappings = args.ToImmutableDictionary(
+                x => x.Expression,
+                x => container.Mappings.SingleOrDefault(m => m.GetElementType() == x.ElementType) ?? (IMapping)Activator.CreateInstance(typeof(AnonymousMapping<>).MakeGenericType(x.ElementType)));
+
+            var instance = CreateMappingFromMappingContext(context, (TComponent)constructors[0].Invoke(args), sourceMappings);
+
+            return container.Add(instance);
         }
 
         public static ComponentMappingReference<TComponent> CreateComponent<TComponent>(Expression<Func<TComponent>> map)
